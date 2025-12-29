@@ -1,0 +1,72 @@
+# Dockerfile for MCP Platform Celery Worker
+# Reuses base image from main Dockerfile for consistency
+
+# Multi-stage build - Base image with Python and system dependencies
+FROM python:3.11-slim as base
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    C_FORCE_ROOT=true
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    libpq-dev \
+    libmariadb-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Stage 2: Dependencies installation
+FROM base as dependencies
+
+# Create and set working directory
+WORKDIR /app
+
+# Copy requirements file
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Stage 3: Final worker image
+FROM base as worker
+
+# Create non-root user for security
+RUN groupadd -r celeryuser && useradd -r -g celeryuser celeryuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy installed dependencies from dependencies stage
+COPY --from=dependencies /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=dependencies /usr/local/bin /usr/local/bin
+
+# Copy application code
+COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini .
+
+# Create necessary directories and set permissions
+RUN mkdir -p /app/logs /app/celery && \
+    chown -R celeryuser:celeryuser /app
+
+# Switch to non-root user
+USER celeryuser
+
+# Celery worker configuration
+ENV CELERY_BROKER_URL="" \
+    CELERY_RESULT_BACKEND="" \
+    CELERY_WORKER_CONCURRENCY=4 \
+    CELERY_WORKER_PREFETCH_MULTIPLIER=4 \
+    CELERY_WORKER_MAX_TASKS_PER_CHILD=1000
+
+# Health check for worker (checks if worker is responsive)
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD celery -A app.core.celery_app inspect ping -d celery@$HOSTNAME || exit 1
+
+# Default command - run Celery worker
+CMD ["celery", "-A", "app.core.celery_app", "worker", "--loglevel=info", "--concurrency=4"]

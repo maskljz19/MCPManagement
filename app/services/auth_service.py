@@ -3,8 +3,10 @@
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 from uuid import UUID
+import hashlib
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from redis.asyncio import Redis
 from app.models.user import UserModel, UserRole
 from app.models.api_key import APIKeyModel
 from app.core.security import (
@@ -15,6 +17,7 @@ from app.core.security import (
     verify_api_key as verify_api_key_hash
 )
 from app.core.permissions import check_permission, get_permissions_for_role
+from app.services.cache_service import CacheService
 
 
 class AuthService:
@@ -25,14 +28,17 @@ class AuthService:
     JWT token generation and validation, and RBAC permission checking.
     """
     
-    def __init__(self, db_session: AsyncSession):
+    def __init__(self, db_session: AsyncSession, cache: Optional[Redis] = None):
         """
         Initialize the authentication service.
         
         Args:
             db_session: Database session for user/API key queries
+            cache: Redis client for session management (optional)
         """
         self.db = db_session
+        self.cache = cache
+        self.cache_service = CacheService(cache) if cache else None
     
     async def authenticate_user(
         self,
@@ -95,6 +101,15 @@ class AuthService:
         
         # Create refresh token
         refresh_token = create_refresh_token(user_id=user.id)
+        
+        # Store refresh token in cache if available
+        if self.cache_service:
+            # Hash the refresh token for storage
+            token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+            await self.cache_service.store_refresh_token(
+                token_hash=token_hash,
+                user_id=UUID(user.id)
+            )
         
         # Calculate expiry in seconds
         from app.core.config import settings
@@ -246,3 +261,72 @@ class AuthService:
             True if user has permission, False otherwise
         """
         return check_permission(user.role, resource, action)
+    
+    async def create_session(
+        self,
+        user: UserModel,
+        session_id: str,
+        metadata: Optional[dict] = None
+    ) -> None:
+        """
+        Create a user session in Redis.
+        
+        Args:
+            user: User model instance
+            session_id: Unique session identifier
+            metadata: Additional session metadata (e.g., IP, user agent)
+        """
+        if not self.cache_service:
+            return
+        
+        session_data = {
+            "user_id": str(user.id),
+            "username": user.username,
+            "role": user.role.value,
+            "metadata": metadata or {}
+        }
+        
+        await self.cache_service.create_session(session_id, session_data)
+    
+    async def get_session(self, session_id: str) -> Optional[dict]:
+        """
+        Retrieve a user session from Redis.
+        
+        Args:
+            session_id: Session identifier
+            
+        Returns:
+            Session data if exists, None otherwise
+        """
+        if not self.cache_service:
+            return None
+        
+        return await self.cache_service.get_session(session_id)
+    
+    async def delete_session(self, session_id: str) -> None:
+        """
+        Delete a user session from Redis.
+        
+        Args:
+            session_id: Session identifier
+        """
+        if not self.cache_service:
+            return
+        
+        await self.cache_service.delete_session(session_id)
+    
+    async def revoke_refresh_token(self, refresh_token: str) -> None:
+        """
+        Revoke a refresh token (logout).
+        
+        Args:
+            refresh_token: Refresh token to revoke
+        """
+        if not self.cache_service:
+            return
+        
+        # Hash the refresh token
+        token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+        
+        # Delete from cache
+        await self.cache_service.delete_refresh_token(token_hash)

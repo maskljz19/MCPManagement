@@ -4,10 +4,10 @@ from datetime import datetime
 from sqlalchemy import Column, String, Integer, TIMESTAMP, ForeignKey, Index, BigInteger
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import relationship
-from app.core.database import Base
+from app.models.base import BaseModel
 
 
-class MCPUsageStatModel(Base):
+class MCPUsageStatModel(BaseModel):
     """
     MCP Usage Statistics model for tracking API usage.
     
@@ -36,8 +36,8 @@ class MCPUsageStatModel(Base):
     
     # Indexes
     __table_args__ = (
-        Index('idx_tool_timestamp', 'tool_id', 'timestamp'),
-        Index('idx_deployment', 'deployment_id'),
+        Index('idx_usage_stats_tool_timestamp', 'tool_id', 'timestamp'),
+        Index('idx_usage_stats_deployment', 'deployment_id'),
     )
     
     def __repr__(self) -> str:

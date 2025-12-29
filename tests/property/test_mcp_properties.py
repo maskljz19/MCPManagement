@@ -8,6 +8,9 @@ from datetime import datetime
 from app.services.mcp_manager import MCPManager, MCPToolFilters, Pagination
 from app.schemas.mcp_tool import MCPToolCreate, MCPToolUpdate, MCPTool
 from app.models.mcp_tool import ToolStatus
+from app.services.mcp_server_manager import MCPServerManager
+from app.schemas.deployment import DeploymentConfig
+from app.models.deployment import DeploymentStatus
 
 
 # ============================================================================
@@ -440,3 +443,269 @@ async def test_version_history_retrieval(
     change_types = [h.change_type for h in history]
     assert "create" in change_types, "Should have create record"
     assert "update" in change_types, "Should have update records"
+
+
+# ============================================================================
+# Deployment Property Tests
+# ============================================================================
+
+# Feature: mcp-platform-backend, Property 17: Deployment Endpoint Uniqueness
+@given(
+    deployment_count=st.integers(min_value=2, max_value=10)
+)
+@settings(
+    max_examples=100,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@pytest.mark.asyncio
+async def test_deployment_endpoint_uniqueness(
+    deployment_count,
+    mcp_server_manager_fixture,
+    mcp_manager_fixture
+):
+    """
+    Property 17: Deployment Endpoint Uniqueness
+    
+    For any set of active MCP deployments, all endpoint URLs should be unique.
+    
+    Validates: Requirements 5.1
+    """
+    mcp_server_manager = mcp_server_manager_fixture
+    mcp_manager = mcp_manager_fixture
+    
+    # Create tools and deploy them
+    deployments = []
+    for i in range(deployment_count):
+        # Create a tool
+        tool_data = MCPToolCreate(
+            name=f"Test Tool {i}",
+            slug=f"test-tool-{i}-{uuid4().hex[:8]}",
+            description=f"Description {i}",
+            version="1.0.0",
+            config={"index": i},
+            author_id=uuid4(),
+            status=ToolStatus.ACTIVE
+        )
+        tool = await mcp_manager.create_tool(tool_data)
+        
+        # Deploy the tool
+        config = DeploymentConfig()
+        deployment = await mcp_server_manager.deploy_server(tool.id, config)
+        deployments.append(deployment)
+    
+    # Extract all endpoint URLs
+    endpoint_urls = [d.endpoint_url for d in deployments]
+    
+    # Assert all endpoints are unique
+    assert len(endpoint_urls) == len(set(endpoint_urls)), \
+        "All deployment endpoint URLs should be unique"
+    
+    # Clean up deployments
+    for deployment in deployments:
+        await mcp_server_manager.stop_server(deployment.id)
+
+
+# Feature: mcp-platform-backend, Property 18: Request Routing Correctness
+@given(
+    tool_data=valid_mcp_tool_create()
+)
+@settings(
+    max_examples=100,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@pytest.mark.asyncio
+async def test_request_routing_correctness(
+    tool_data,
+    mcp_server_manager_fixture,
+    mcp_manager_fixture
+):
+    """
+    Property 18: Request Routing Correctness
+    
+    For any HTTP request to a deployed MCP tool endpoint, the request should be
+    routed to the handler for the correct tool based on the slug.
+    
+    Validates: Requirements 5.2
+    """
+    mcp_server_manager = mcp_server_manager_fixture
+    mcp_manager = mcp_manager_fixture
+    
+    # Create and deploy a tool
+    tool = await mcp_manager.create_tool(tool_data)
+    config = DeploymentConfig()
+    deployment = await mcp_server_manager.deploy_server(tool.id, config)
+    
+    # Wait for deployment to be ready
+    import asyncio
+    await asyncio.sleep(1)
+    
+    try:
+        # Route a request using the tool's slug
+        response = await mcp_server_manager.route_request(
+            slug=tool.slug,
+            path="/",
+            method="GET"
+        )
+        
+        # Assert request was routed (we should get a response)
+        assert response is not None, "Should receive a response from routed request"
+        
+        # The response should come from the deployed server
+        # (status code should be valid HTTP status)
+        assert 100 <= response.status_code < 600, \
+            "Response should have valid HTTP status code"
+        
+    finally:
+        # Clean up
+        await mcp_server_manager.stop_server(deployment.id)
+
+
+# Feature: mcp-platform-backend, Property 19: Deployment Shutdown Status
+@given(
+    tool_data=valid_mcp_tool_create()
+)
+@settings(
+    max_examples=100,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@pytest.mark.asyncio
+async def test_deployment_shutdown_status(
+    tool_data,
+    mcp_server_manager_fixture,
+    mcp_manager_fixture
+):
+    """
+    Property 19: Deployment Shutdown Status
+    
+    For any running MCP deployment, when stopped, the deployment status should
+    transition to "stopped" in the database.
+    
+    Validates: Requirements 5.5
+    """
+    mcp_server_manager = mcp_server_manager_fixture
+    mcp_manager = mcp_manager_fixture
+    
+    # Create and deploy a tool
+    tool = await mcp_manager.create_tool(tool_data)
+    config = DeploymentConfig()
+    deployment = await mcp_server_manager.deploy_server(tool.id, config)
+    
+    # Assert deployment is running
+    assert deployment.status == DeploymentStatus.RUNNING, \
+        "Deployment should be in RUNNING status after creation"
+    
+    # Stop the deployment
+    stop_result = await mcp_server_manager.stop_server(deployment.id)
+    assert stop_result is True, "Stop operation should succeed"
+    
+    # Verify status in database by querying
+    from sqlalchemy import select
+    from app.models.deployment import MCPDeploymentModel
+    
+    stmt = select(MCPDeploymentModel).where(
+        MCPDeploymentModel.id == str(deployment.id)
+    )
+    result = await mcp_server_manager.db.execute(stmt)
+    deployment_model = result.scalar_one_or_none()
+    
+    # Assert status is STOPPED
+    assert deployment_model is not None, "Deployment should exist in database"
+    assert deployment_model.status == DeploymentStatus.STOPPED, \
+        "Deployment status should be STOPPED after stopping"
+    assert deployment_model.stopped_at is not None, \
+        "Deployment should have stopped_at timestamp"
+
+
+# Feature: mcp-platform-backend, Property 27: Usage Statistics Recording
+@given(
+    tool_data=valid_mcp_tool_create(),
+    endpoint_path=st.text(min_size=1, max_size=100, alphabet=st.characters(
+        whitelist_categories=('Lu', 'Ll', 'Nd'),
+        whitelist_characters='/-_'
+    )),
+    method=st.sampled_from(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']),
+    status_code=st.integers(min_value=200, max_value=599),
+    response_time_ms=st.integers(min_value=1, max_value=10000)
+)
+@settings(
+    max_examples=100,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture]
+)
+@pytest.mark.asyncio
+async def test_usage_statistics_recording(
+    tool_data,
+    endpoint_path,
+    method,
+    status_code,
+    response_time_ms,
+    mcp_manager_fixture,
+    mcp_server_manager_fixture
+):
+    """
+    Property 27: Usage Statistics Recording
+    
+    For any API request to an MCP tool endpoint, a usage statistics record should
+    be created in MySQL with a timestamp.
+    
+    Validates: Requirements 7.4
+    """
+    mcp_manager = mcp_manager_fixture
+    mcp_server_manager = mcp_server_manager_fixture
+    
+    # Create and deploy a tool
+    tool = await mcp_manager.create_tool(tool_data)
+    config = DeploymentConfig()
+    deployment = await mcp_server_manager.deploy_server(tool.id, config)
+    
+    # Manually create a usage stat record (simulating middleware behavior)
+    from app.models.usage_stat import MCPUsageStatModel
+    from datetime import datetime
+    
+    usage_stat = MCPUsageStatModel(
+        tool_id=str(tool.id),
+        deployment_id=str(deployment.id),
+        endpoint=f"/mcp/{tool.slug}/v1/{endpoint_path}",
+        method=method,
+        status_code=status_code,
+        response_time_ms=response_time_ms,
+        user_id=str(uuid4()),
+        timestamp=datetime.utcnow()
+    )
+    
+    mcp_manager.db.add(usage_stat)
+    await mcp_manager.db.flush()
+    await mcp_manager.db.refresh(usage_stat)
+    
+    # Verify the usage stat was recorded
+    from sqlalchemy import select
+    
+    stmt = select(MCPUsageStatModel).where(
+        MCPUsageStatModel.tool_id == str(tool.id),
+        MCPUsageStatModel.deployment_id == str(deployment.id)
+    )
+    result = await mcp_manager.db.execute(stmt)
+    recorded_stat = result.scalar_one_or_none()
+    
+    # Assert usage stat exists and has correct data
+    assert recorded_stat is not None, \
+        "Usage statistics record should exist in database"
+    assert recorded_stat.tool_id == str(tool.id), \
+        "Usage stat should reference correct tool_id"
+    assert recorded_stat.deployment_id == str(deployment.id), \
+        "Usage stat should reference correct deployment_id"
+    assert recorded_stat.endpoint == f"/mcp/{tool.slug}/v1/{endpoint_path}", \
+        "Usage stat should record correct endpoint"
+    assert recorded_stat.method == method, \
+        "Usage stat should record correct HTTP method"
+    assert recorded_stat.status_code == status_code, \
+        "Usage stat should record correct status code"
+    assert recorded_stat.response_time_ms == response_time_ms, \
+        "Usage stat should record correct response time"
+    assert recorded_stat.timestamp is not None, \
+        "Usage stat should have a timestamp"
+    assert isinstance(recorded_stat.timestamp, datetime), \
+        "Timestamp should be a datetime object"

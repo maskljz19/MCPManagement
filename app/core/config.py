@@ -1,7 +1,7 @@
 """Application Configuration"""
 
 from pydantic_settings import BaseSettings
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_validator
 from typing import Optional
 
 
@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "MCP Platform API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+    ENVIRONMENT: str = "production"  # development, staging, production
     
     # Database - MySQL
     MYSQL_HOST: str = "localhost"
@@ -57,6 +58,42 @@ class Settings(BaseSettings):
     
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    CORS_ALLOW_CREDENTIALS: bool = True
+    CORS_ALLOW_METHODS: list[str] = ["*"]
+    CORS_ALLOW_HEADERS: list[str] = ["*"]
+    
+    # Rate Limiting
+    RATE_LIMIT_PER_MINUTE: int = 60
+    RATE_LIMIT_ENABLED: bool = True
+    
+    # Logging
+    LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "json"  # json or text
+    
+    @field_validator('MYSQL_PORT', 'REDIS_PORT', 'QDRANT_PORT', 'RABBITMQ_PORT')
+    @classmethod
+    def validate_port(cls, v: int, info) -> int:
+        """Validate that port numbers are in the valid range (1-65535)"""
+        if v < 1 or v > 65535:
+            raise ValueError(f'{info.field_name} must be between 1 and 65535, got {v}')
+        return v
+    
+    @field_validator('LOG_LEVEL')
+    @classmethod
+    def validate_log_level(cls, v: str) -> str:
+        """Validate that log level is one of the standard Python logging levels"""
+        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        if v.upper() not in valid_levels:
+            raise ValueError(f'LOG_LEVEL must be one of {valid_levels}, got {v}')
+        return v.upper()
+    
+    @field_validator('SECRET_KEY')
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        """Validate that secret key is sufficiently long for security"""
+        if len(v) < 32:
+            raise ValueError('SECRET_KEY must be at least 32 characters long for security')
+        return v
 
 
 settings = Settings()

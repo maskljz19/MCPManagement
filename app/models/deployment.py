@@ -58,8 +58,8 @@ class MCPDeploymentModel(BaseModel):
     
     # Indexes
     __table_args__ = (
-        Index('idx_tool', 'tool_id'),
-        Index('idx_status', 'status'),
+        Index('idx_mcp_deployments_tool', 'tool_id'),
+        Index('idx_mcp_deployments_status', 'status'),
     )
     
     def __repr__(self) -> str:

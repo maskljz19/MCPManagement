@@ -103,6 +103,26 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Get async database session for use in Celery tasks.
+    
+    Usage:
+        async for session in get_async_session():
+            # Use session
+            pass
+    """
+    if async_session_factory is None:
+        # Initialize if not already done
+        await init_mysql()
+    
+    async with async_session_factory() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+
 async def check_mysql_connection() -> bool:
     """
     Check if MySQL connection is healthy.
@@ -351,3 +371,61 @@ async def check_qdrant_connection() -> bool:
         return True
     except Exception:
         return False
+
+
+# ============================================================================
+# Helper Functions for Celery Tasks
+# ============================================================================
+
+def get_mongodb_client() -> AsyncIOMotorClient:
+    """
+    Get MongoDB client for Celery tasks.
+    Creates a new client if not initialized.
+    """
+    global mongo_client
+    if mongo_client is None:
+        mongo_client = AsyncIOMotorClient(
+            settings.MONGODB_URL,
+            maxPoolSize=50,
+            minPoolSize=10,
+            maxIdleTimeMS=45000,
+            serverSelectionTimeoutMS=5000,
+        )
+    return mongo_client
+
+
+def get_qdrant_client() -> QdrantClient:
+    """
+    Get Qdrant client for Celery tasks.
+    Creates a new client if not initialized.
+    """
+    global qdrant_client
+    if qdrant_client is None:
+        qdrant_client = QdrantClient(
+            host=settings.QDRANT_HOST,
+            port=settings.QDRANT_PORT,
+            api_key=settings.QDRANT_API_KEY,
+            timeout=10,
+        )
+    return qdrant_client
+
+
+def get_redis_client() -> Redis:
+    """
+    Get Redis client for Celery tasks.
+    Creates a new client if not initialized.
+    """
+    global redis_client, redis_pool
+    if redis_client is None:
+        redis_url = get_redis_url()
+        redis_pool = ConnectionPool.from_url(
+            redis_url,
+            max_connections=50,
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_keepalive=True,
+            retry_on_timeout=True,
+            health_check_interval=30,
+        )
+        redis_client = Redis(connection_pool=redis_pool)
+    return redis_client

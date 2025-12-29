@@ -51,9 +51,9 @@ class MCPToolModel(BaseModel):
     
     # Indexes
     __table_args__ = (
-        Index('idx_slug', 'slug'),
-        Index('idx_author', 'author_id'),
-        Index('idx_status', 'status'),
+        Index('idx_mcp_tools_slug', 'slug'),
+        Index('idx_mcp_tools_author', 'author_id'),
+        Index('idx_mcp_tools_status', 'status'),
     )
     
     def __repr__(self) -> str:

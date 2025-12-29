@@ -43,6 +43,14 @@ from app.schemas.common import (
     ErrorResponse,
     HealthCheck
 )
+from app.schemas.github import (
+    GitHubConnectionCreate,
+    GitHubConnection,
+    SyncTriggerResponse,
+    WebhookEvent,
+    WebhookProcessResponse,
+    SyncResult
+)
 
 __all__ = [
     # MCP Tool schemas
@@ -81,4 +89,11 @@ __all__ = [
     "Page",
     "ErrorResponse",
     "HealthCheck",
+    # GitHub schemas
+    "GitHubConnectionCreate",
+    "GitHubConnection",
+    "SyncTriggerResponse",
+    "WebhookEvent",
+    "WebhookProcessResponse",
+    "SyncResult",
 ]

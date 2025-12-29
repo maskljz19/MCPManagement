@@ -16,6 +16,7 @@ from app.schemas.mcp_tool import (
     MCPTool,
     MCPToolVersion
 )
+from app.services.cache_service import CacheService
 
 
 class MCPToolFilters:
@@ -90,6 +91,7 @@ class MCPManager:
         self.db = db_session
         self.mongo = mongo_db
         self.cache = cache
+        self.cache_service = CacheService(cache)
         self.history_collection = mongo_db["mcp_config_history"]
     
     # ========================================================================
@@ -144,8 +146,8 @@ class MCPManager:
         # Convert to Pydantic model
         tool = MCPTool.model_validate(tool_model)
         
-        # Cache the tool
-        await self._cache_tool(tool)
+        # Cache the tool using CacheService
+        await self.cache_service.set_tool(tool.id, tool.model_dump())
         
         return tool
     
@@ -159,10 +161,10 @@ class MCPManager:
         Returns:
             MCP tool if found, None otherwise
         """
-        # Try cache first
-        cached_tool = await self._get_cached_tool(tool_id)
-        if cached_tool:
-            return cached_tool
+        # Try cache first using CacheService
+        cached_data = await self.cache_service.get_tool(tool_id)
+        if cached_data:
+            return MCPTool(**cached_data)
         
         # Query database
         stmt = select(MCPToolModel).where(
@@ -178,8 +180,8 @@ class MCPManager:
         # Convert to Pydantic model
         tool = MCPTool.model_validate(tool_model)
         
-        # Cache the tool
-        await self._cache_tool(tool)
+        # Cache the tool using CacheService
+        await self.cache_service.set_tool(tool_id, tool.model_dump())
         
         return tool
     
@@ -252,8 +254,9 @@ class MCPManager:
         # Convert to Pydantic model
         tool = MCPTool.model_validate(tool_model)
         
-        # Invalidate cache
-        await self._invalidate_cache(tool_id)
+        # Invalidate cache using CacheService
+        await self.cache_service.delete_tool(tool_id)
+        await self.cache_service.invalidate_tool_lists()
         
         return tool
     
@@ -296,8 +299,9 @@ class MCPManager:
             change_type="delete"
         )
         
-        # Invalidate cache
-        await self._invalidate_cache(tool_id)
+        # Invalidate cache using CacheService
+        await self.cache_service.delete_tool(tool_id)
+        await self.cache_service.invalidate_tool_lists()
         
         return True
     
@@ -316,6 +320,28 @@ class MCPManager:
         Returns:
             Paginated list of MCP tools
         """
+        # Try cache first
+        filters_dict = {
+            "status": filters.status.value if filters.status else None,
+            "author_id": str(filters.author_id) if filters.author_id else None,
+            "search": filters.search
+        }
+        pagination_dict = {
+            "page": pagination.page,
+            "page_size": pagination.page_size
+        }
+        
+        cached_data = await self.cache_service.get_tool_list(filters_dict, pagination_dict)
+        if cached_data:
+            # Reconstruct Page object from cached data
+            tools = [MCPTool(**item) for item in cached_data["items"]]
+            return Page(
+                items=tools,
+                total=cached_data["total"],
+                page=cached_data["page"],
+                page_size=cached_data["page_size"]
+            )
+        
         # Build query
         stmt = select(MCPToolModel).where(MCPToolModel.deleted_at.is_(None))
         
@@ -349,12 +375,24 @@ class MCPManager:
         # Convert to Pydantic models
         tools = [MCPTool.model_validate(model) for model in tool_models]
         
-        return Page(
+        # Create page object
+        page = Page(
             items=tools,
             total=total,
             page=pagination.page,
             page_size=pagination.page_size
         )
+        
+        # Cache the results
+        cache_data = {
+            "items": [tool.model_dump() for tool in tools],
+            "total": total,
+            "page": pagination.page,
+            "page_size": pagination.page_size
+        }
+        await self.cache_service.set_tool_list(filters_dict, pagination_dict, cache_data)
+        
+        return page
     
     # ========================================================================
     # Version History Management
@@ -429,24 +467,3 @@ class MCPManager:
             sort=[("changed_at", -1)]  # Descending order (newest first)
         )
         return doc["config"] if doc else None
-    
-    async def _cache_tool(self, tool: MCPTool) -> None:
-        """Cache tool in Redis"""
-        cache_key = f"cache:mcp_tool:{tool.id}"
-        tool_json = tool.model_dump_json()
-        await self.cache.setex(cache_key, 3600, tool_json)  # 1 hour TTL
-    
-    async def _get_cached_tool(self, tool_id: UUID) -> Optional[MCPTool]:
-        """Get tool from cache"""
-        cache_key = f"cache:mcp_tool:{tool_id}"
-        cached_data = await self.cache.get(cache_key)
-        
-        if cached_data:
-            return MCPTool.model_validate_json(cached_data)
-        
-        return None
-    
-    async def _invalidate_cache(self, tool_id: UUID) -> None:
-        """Invalidate tool cache"""
-        cache_key = f"cache:mcp_tool:{tool_id}"
-        await self.cache.delete(cache_key)

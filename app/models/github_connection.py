@@ -36,7 +36,7 @@ class GitHubConnectionModel(BaseModel):
     
     # Indexes
     __table_args__ = (
-        Index('idx_tool', 'tool_id'),
+        Index('idx_github_connections_tool', 'tool_id'),
     )
     
     def __repr__(self) -> str:

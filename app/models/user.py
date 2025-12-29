@@ -52,8 +52,8 @@ class UserModel(BaseModel):
     
     # Indexes
     __table_args__ = (
-        Index('idx_username', 'username'),
-        Index('idx_email', 'email'),
+        Index('idx_users_username', 'username'),
+        Index('idx_users_email', 'email'),
     )
     
     def set_password(self, password: str) -> None:
