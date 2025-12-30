@@ -17,7 +17,6 @@ class TestHealthCheck:
         with patch('app.api.v1.health.check_mysql', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_mongodb', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_redis', new_callable=AsyncMock, return_value=True), \
-             patch('app.api.v1.health.check_qdrant', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_rabbitmq', new_callable=AsyncMock, return_value=True):
             
             response = client.get("/health")
@@ -28,7 +27,6 @@ class TestHealthCheck:
             assert data["services"]["mysql"] is True
             assert data["services"]["mongodb"] is True
             assert data["services"]["redis"] is True
-            assert data["services"]["qdrant"] is True
             assert data["services"]["rabbitmq"] is True
     
     def test_health_check_mysql_unavailable(self):
@@ -37,7 +35,6 @@ class TestHealthCheck:
         with patch('app.api.v1.health.check_mysql', new_callable=AsyncMock, return_value=False), \
              patch('app.api.v1.health.check_mongodb', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_redis', new_callable=AsyncMock, return_value=True), \
-             patch('app.api.v1.health.check_qdrant', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_rabbitmq', new_callable=AsyncMock, return_value=True):
             
             response = client.get("/health")
@@ -54,7 +51,6 @@ class TestHealthCheck:
         with patch('app.api.v1.health.check_mysql', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_mongodb', new_callable=AsyncMock, return_value=False), \
              patch('app.api.v1.health.check_redis', new_callable=AsyncMock, return_value=True), \
-             patch('app.api.v1.health.check_qdrant', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_rabbitmq', new_callable=AsyncMock, return_value=True):
             
             response = client.get("/health")
@@ -70,7 +66,6 @@ class TestHealthCheck:
         with patch('app.api.v1.health.check_mysql', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_mongodb', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_redis', new_callable=AsyncMock, return_value=False), \
-             patch('app.api.v1.health.check_qdrant', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_rabbitmq', new_callable=AsyncMock, return_value=True):
             
             response = client.get("/health")
@@ -86,7 +81,6 @@ class TestHealthCheck:
         with patch('app.api.v1.health.check_mysql', new_callable=AsyncMock, return_value=False), \
              patch('app.api.v1.health.check_mongodb', new_callable=AsyncMock, return_value=False), \
              patch('app.api.v1.health.check_redis', new_callable=AsyncMock, return_value=True), \
-             patch('app.api.v1.health.check_qdrant', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_rabbitmq', new_callable=AsyncMock, return_value=True):
             
             response = client.get("/health")
@@ -104,7 +98,6 @@ class TestHealthCheck:
         with patch('app.api.v1.health.check_mysql', new_callable=AsyncMock, return_value=False), \
              patch('app.api.v1.health.check_mongodb', new_callable=AsyncMock, return_value=False), \
              patch('app.api.v1.health.check_redis', new_callable=AsyncMock, return_value=False), \
-             patch('app.api.v1.health.check_qdrant', new_callable=AsyncMock, return_value=False), \
              patch('app.api.v1.health.check_rabbitmq', new_callable=AsyncMock, return_value=False):
             
             response = client.get("/health")
@@ -172,14 +165,13 @@ class TestHealthCheckDependencies:
         with patch('app.api.v1.health.check_mysql', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_mongodb', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_redis', new_callable=AsyncMock, return_value=True), \
-             patch('app.api.v1.health.check_qdrant', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_rabbitmq', new_callable=AsyncMock, return_value=True):
             
             response = client.get("/health")
             data = response.json()
             
             # Should check all required services
-            required_services = ["mysql", "mongodb", "redis", "qdrant", "rabbitmq"]
+            required_services = ["mysql", "mongodb", "redis", "rabbitmq"]
             for service in required_services:
                 assert service in data["services"], f"Missing health check for {service}"
     
@@ -192,7 +184,6 @@ class TestHealthCheckDependencies:
         with patch('app.api.v1.health.check_mysql', new_callable=AsyncMock, return_value=True), \
              patch('app.api.v1.health.check_mongodb', new_callable=AsyncMock, return_value=False), \
              patch('app.api.v1.health.check_redis', new_callable=AsyncMock, return_value=True), \
-             patch('app.api.v1.health.check_qdrant', new_callable=AsyncMock, return_value=False), \
              patch('app.api.v1.health.check_rabbitmq', new_callable=AsyncMock, return_value=True):
             
             response = client.get("/health")
@@ -207,5 +198,4 @@ class TestHealthCheckDependencies:
             assert data["services"]["mysql"] is True
             assert data["services"]["mongodb"] is False
             assert data["services"]["redis"] is True
-            assert data["services"]["qdrant"] is False
             assert data["services"]["rabbitmq"] is True

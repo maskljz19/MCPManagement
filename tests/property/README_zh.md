@@ -14,7 +14,6 @@
 - `test_database_properties.py` - 数据库操作测试（连接、事务）
 - `test_migration_properties.py` - Alembic 迁移测试（执行、回滚）
 - `test_validation_properties.py` - 输入验证测试（Pydantic 模式）
-- `test_knowledge_properties.py` - 知识库服务测试（文档、嵌入、搜索）
 
 ## 前置条件
 
@@ -30,10 +29,6 @@
    - 用于缓存和会话管理
    - 如果 Redis 不可用，测试将被跳过
 
-3. **Qdrant**（可选，测试使用内存模式）
-   - 用于向量存储和语义搜索
-   - 测试使用内存中的 Qdrant 客户端
-
 ### 使用 Docker 启动服务
 
 ```bash
@@ -42,20 +37,11 @@ docker run -d --name mongodb -p 27017:27017 mongo:latest
 
 # 启动 Redis
 docker run -d --name redis -p 6379:6379 redis:latest
-
-# 可选：启动 Qdrant（如果不使用内存模式）
-docker run -d --name qdrant -p 6333:6333 qdrant/qdrant:latest
 ```
 
 ### 环境变量
 
-对于使用真实 OpenAI 嵌入的知识库测试：
-
-```bash
-export OPENAI_API_KEY=sk-your-api-key-here
-```
-
-如果未设置 `OPENAI_API_KEY`，测试将使用确定性模拟嵌入。
+属性测试不需要特殊的环境变量。
 
 ## 运行测试
 
@@ -68,13 +54,13 @@ pytest tests/property/ -v
 ### 运行特定测试文件
 
 ```bash
-pytest tests/property/test_knowledge_properties.py -v
+pytest tests/property/test_cache_properties.py -v
 ```
 
 ### 运行特定测试
 
 ```bash
-pytest tests/property/test_knowledge_properties.py::test_dual_store_document_consistency -v
+pytest tests/property/test_cache_properties.py::test_cache_expiration -v
 ```
 
 ### 运行带覆盖率的测试
@@ -130,19 +116,9 @@ async def test_property_name(input_data, fixture):
     # 断言
 ```
 
-## 知识库服务测试
+## 关于知识库测试的说明
 
-### 属性 5：双存储文档一致性
-验证文档在 MongoDB 和 Qdrant 中都存储，且 ID 匹配。
-
-### 属性 6：搜索结果排序
-验证搜索结果按相似度分数降序排列。
-
-### 属性 7：文档删除一致性
-验证删除时文档从 MongoDB 和 Qdrant 中都被移除。
-
-### 属性 8：嵌入维度一致性
-验证所有嵌入具有相同维度（text-embedding-3-small 为 1536）。
+由于硬件限制，向量搜索功能（Qdrant）已被禁用，知识库属性测试已被移除。知识库现在使用简单的 MongoDB 文本搜索。
 
 ## 故障排除
 

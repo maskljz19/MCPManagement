@@ -57,7 +57,7 @@ async def db_session(db_engine):
 @pytest_asyncio.fixture
 async def mongo_client():
     """Create test MongoDB client"""
-    # Try to connect to MongoDB, but if not available, use mongomock
+    # Try to connect to MongoDB, but if not available, skip tests
     try:
         # Use a test database
         client = AsyncIOMotorClient(
@@ -107,40 +107,6 @@ async def redis_client():
         pytest.skip(f"Redis not available: {e}")
 
 
-@pytest_asyncio.fixture
-async def qdrant_client():
-    """Create test Qdrant client"""
-    try:
-        # Create Qdrant client (in-memory mode for testing)
-        client = QdrantClient(":memory:")
-        
-        # Create test collection
-        test_collection_name = f"test_{QDRANT_COLLECTION_NAME}_{uuid4().hex[:8]}"
-        
-        client.create_collection(
-            collection_name=test_collection_name,
-            vectors_config=VectorParams(
-                size=EMBEDDING_DIMENSION,
-                distance=Distance.COSINE,
-            ),
-        )
-        
-        # Store collection name for cleanup
-        client._test_collection_name = test_collection_name
-        
-        yield client
-        
-        # Cleanup: delete test collection
-        try:
-            client.delete_collection(collection_name=test_collection_name)
-        except:
-            pass  # Collection might not exist
-        
-        client.close()
-    except Exception as e:
-        pytest.skip(f"Qdrant not available: {e}")
-
-
 # ============================================================================
 # Service Fixtures
 # ============================================================================
@@ -170,117 +136,6 @@ async def knowledge_service_fixture(mongo_client, redis_client):
         redis=redis_client,
         openai_api_key=openai_api_key
     )
-    
-    # If no real API key, mock the embeddings generation
-    if openai_api_key == "test-key-for-mocking":
-        import hashlib
-        
-        async def mock_generate_embeddings(text: str):
-            """Generate deterministic fake embeddings for testing"""
-            # Use hash of text to generate deterministic vector
-            hash_obj = hashlib.sha256(text.encode())
-            hash_bytes = hash_obj.digest()
-            
-            # Convert to floats in range [-1, 1]
-            vector = []
-            for i in range(EMBEDDING_DIMENSION):
-                byte_val = hash_bytes[i % len(hash_bytes)]
-                # Normalize to [-1, 1]
-                float_val = (byte_val / 255.0) * 2 - 1
-                vector.append(float_val)
-            
-            return vector
-        
-        async def mock_generate_embeddings_batch(texts):
-            """Generate batch of fake embeddings"""
-            return [await mock_generate_embeddings(text) for text in texts]
-        
-        service.generate_embeddings = mock_generate_embeddings
-        service.generate_embeddings_batch = mock_generate_embeddings_batch
-    
-    # Patch methods to use test collection
-    original_store_vector = service._store_vector
-    original_delete_vector = service._delete_vector
-    original_search = service.search_documents
-    
-    async def patched_store_vector(embedding_id, document_id, vector, title, metadata):
-        from qdrant_client.models import PointStruct
-        point = PointStruct(
-            id=str(embedding_id),
-            vector=vector,
-            payload={
-                "document_id": str(document_id),
-                "title": title,
-                **metadata
-            }
-        )
-        
-        service.qdrant.upsert(
-            collection_name=test_collection_name,
-            points=[point]
-        )
-    
-    async def patched_delete_vector(embedding_id):
-        try:
-            service.qdrant.delete(
-                collection_name=test_collection_name,
-                points_selector=[str(embedding_id)]
-            )
-        except Exception:
-            pass
-    
-    async def patched_search(query):
-        query_vector = await service.generate_embeddings(query.query)
-        
-        qdrant_filter = None
-        if query.filters:
-            from qdrant_client.models import Filter, FieldCondition, MatchValue
-            conditions = []
-            for key, value in query.filters.items():
-                conditions.append(
-                    FieldCondition(
-                        key=key,
-                        match=MatchValue(value=value)
-                    )
-                )
-            if conditions:
-                qdrant_filter = Filter(must=conditions)
-        
-        search_results = service.qdrant.search(
-            collection_name=test_collection_name,
-            query_vector=query_vector,
-            limit=query.limit,
-            query_filter=qdrant_filter,
-            score_threshold=query.min_similarity
-        )
-        
-        from app.schemas.knowledge import SearchResult
-        from uuid import UUID
-        results = []
-        for hit in search_results:
-            document_id = UUID(hit.payload["document_id"])
-            
-            mongo_doc = await service.documents_collection.find_one(
-                {"document_id": str(document_id)}
-            )
-            
-            if mongo_doc:
-                content = mongo_doc["content"]
-                snippet = content[:500] + "..." if len(content) > 500 else content
-                
-                results.append(SearchResult(
-                    document_id=document_id,
-                    title=mongo_doc["title"],
-                    content_snippet=snippet,
-                    similarity_score=hit.score,
-                    metadata=mongo_doc.get("metadata", {})
-                ))
-        
-        return results
-    
-    service._store_vector = patched_store_vector
-    service._delete_vector = patched_delete_vector
-    service.search_documents = patched_search
     
     yield service
     

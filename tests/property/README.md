@@ -14,7 +14,6 @@ Property-based tests verify universal properties that should hold for all valid 
 - `test_database_properties.py` - Tests for Database operations (connections, transactions)
 - `test_migration_properties.py` - Tests for Alembic migrations (execution, rollback)
 - `test_validation_properties.py` - Tests for Input validation (Pydantic schemas)
-- `test_knowledge_properties.py` - Tests for Knowledge Base Service (documents, embeddings, search)
 
 ## Prerequisites
 
@@ -30,10 +29,6 @@ The property tests require the following services to be running:
    - Used for caching and session management
    - Tests will be skipped if Redis is not available
 
-3. **Qdrant** (optional, uses in-memory mode for tests)
-   - Used for vector storage and semantic search
-   - Tests use in-memory Qdrant client
-
 ### Starting Services with Docker
 
 ```bash
@@ -42,20 +37,11 @@ docker run -d --name mongodb -p 27017:27017 mongo:latest
 
 # Start Redis
 docker run -d --name redis -p 6379:6379 redis:latest
-
-# Optional: Start Qdrant (if not using in-memory mode)
-docker run -d --name qdrant -p 6333:6333 qdrant/qdrant:latest
 ```
 
 ### Environment Variables
 
-For Knowledge Base tests that use real OpenAI embeddings:
-
-```bash
-export OPENAI_API_KEY=sk-your-api-key-here
-```
-
-If `OPENAI_API_KEY` is not set, tests will use deterministic mock embeddings.
+No special environment variables are required for property tests.
 
 ## Running Tests
 
@@ -68,13 +54,13 @@ pytest tests/property/ -v
 ### Run Specific Test File
 
 ```bash
-pytest tests/property/test_knowledge_properties.py -v
+pytest tests/property/test_cache_properties.py -v
 ```
 
 ### Run Specific Test
 
 ```bash
-pytest tests/property/test_knowledge_properties.py::test_dual_store_document_consistency -v
+pytest tests/property/test_cache_properties.py::test_cache_expiration -v
 ```
 
 ### Run with Coverage
@@ -130,19 +116,9 @@ async def test_property_name(input_data, fixture):
     # Assert
 ```
 
-## Knowledge Base Service Tests
+## Note on Knowledge Base Tests
 
-### Property 5: Dual-Store Document Consistency
-Validates that documents are stored in both MongoDB and Qdrant with matching IDs.
-
-### Property 6: Search Result Ordering
-Validates that search results are ordered by descending similarity score.
-
-### Property 7: Document Deletion Consistency
-Validates that documents are removed from both MongoDB and Qdrant when deleted.
-
-### Property 8: Embedding Dimension Consistency
-Validates that all embeddings have the same dimension (1536 for text-embedding-3-small).
+Knowledge Base property tests have been removed as vector search functionality (Qdrant) has been disabled due to hardware limitations. The knowledge base now uses simple MongoDB text search.
 
 ## Troubleshooting
 

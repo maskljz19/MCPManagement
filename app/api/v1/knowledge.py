@@ -2,12 +2,11 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from qdrant_client import QdrantClient
 from redis.asyncio import Redis
 from uuid import UUID
 from typing import List
 
-from app.core.database import get_mongodb, get_qdrant, get_redis
+from app.core.database import get_mongodb, get_redis
 from app.core.config import settings
 from app.services.knowledge_service import KnowledgeBaseService
 from app.schemas.knowledge import (
@@ -29,11 +28,9 @@ async def get_knowledge_service(
 ) -> KnowledgeBaseService:
     """Dependency to get KnowledgeBaseService instance"""
     mongo = get_mongodb()
-    qdrant = get_qdrant()
     
     return KnowledgeBaseService(
         mongo_db=mongo,
-        qdrant_client=qdrant,
         redis=redis,
         openai_api_key=settings.OPENAI_API_KEY
     )
@@ -49,9 +46,7 @@ async def upload_document(
     """
     Upload a new document to the knowledge base.
     
-    Stores the document in MongoDB and generates embeddings in Qdrant
-    for semantic search. The document content is embedded using OpenAI's
-    text-embedding-3-small model.
+    Stores the document in MongoDB for later retrieval and text search.
     
     Args:
         doc_data: Document creation data (title, content, metadata)
@@ -123,8 +118,7 @@ async def delete_document(
     """
     Delete a document from the knowledge base.
     
-    Removes the document from both MongoDB and Qdrant to maintain
-    dual-store consistency.
+    Removes the document from MongoDB.
     
     Args:
         doc_id: Document unique identifier
@@ -158,19 +152,20 @@ async def search_documents(
     knowledge_service: KnowledgeBaseService = Depends(get_knowledge_service)
 ):
     """
-    Perform semantic search on the knowledge base.
+    Perform text search on the knowledge base.
     
-    Converts the query text to an embedding vector and searches for
-    similar documents in Qdrant. Results are ordered by similarity score
-    (descending) and enriched with full document data from MongoDB.
+    Searches for documents matching the query text using MongoDB text search.
+    Results are ordered by relevance.
+    
+    Note: Semantic search has been disabled due to hardware limitations.
     
     Args:
-        query: Search query with parameters (query text, limit, filters, min_similarity)
+        query: Search query with parameters (query text, limit, filters)
         current_user: Currently authenticated user
         knowledge_service: Knowledge Base service
         
     Returns:
-        List of search results ordered by similarity score (descending)
+        List of search results ordered by relevance
         
     Raises:
         HTTPException 401: If user is not authenticated
