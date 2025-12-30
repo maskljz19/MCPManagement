@@ -191,7 +191,6 @@ services:
       context: .
       dockerfile: Dockerfile.worker
       target: worker
-    container_name: mcp-worker
     environment:
       # Application
       APP_NAME: ${APP_NAME}
