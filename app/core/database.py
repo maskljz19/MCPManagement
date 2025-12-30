@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncEngine
 )
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.pool import NullPool, AsyncAdaptedQueuePool
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from redis.asyncio import Redis, ConnectionPool
 from qdrant_client import QdrantClient
@@ -59,7 +59,7 @@ async def init_mysql() -> None:
         pool_timeout=30,  # Timeout for getting connection from pool
         pool_recycle=3600,  # Recycle connections after 1 hour
         pool_pre_ping=True,  # Verify connections before using
-        poolclass=QueuePool,
+        poolclass=AsyncAdaptedQueuePool,
     )
     
     # Create async session factory
