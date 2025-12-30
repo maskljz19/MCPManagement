@@ -52,6 +52,7 @@ class Settings(BaseSettings):
     
     # OpenAI
     OPENAI_API_KEY: Optional[str] = None
+    OPENAI_API_BASE: Optional[str] = None
     
     # GitHub
     GITHUB_TOKEN: Optional[str] = None

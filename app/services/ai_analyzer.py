@@ -46,13 +46,15 @@ class AIAnalyzer:
         
         # Initialize LangChain ChatOpenAI
         api_key = openai_api_key or settings.OPENAI_API_KEY
+        base_url = settings.OPENAI_API_BASE or "https://api.openai.com/v1"
         if not api_key:
             raise ValueError("OpenAI API key is required for AI Analyzer")
         
         self.llm = ChatOpenAI(
             model="gpt-4",
             temperature=0.2,
-            api_key=api_key
+            api_key=api_key,
+            base_url=base_url
         )
         
         # Initialize output parsers
