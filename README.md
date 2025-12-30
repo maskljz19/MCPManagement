@@ -6,7 +6,7 @@ A comprehensive, production-ready backend service for managing Model Context Pro
 
 ### Core Functionality
 - **MCP Tool Management**: Full CRUD operations with version history tracking
-- **Knowledge Base**: Semantic search using vector embeddings (Qdrant)
+- **Knowledge Base**: Document storage and basic text search (MongoDB)
 - **AI Analysis**: Feasibility analysis, improvement suggestions, and auto-configuration generation
 - **GitHub Integration**: Repository synchronization and webhook processing
 - **Dynamic Deployments**: On-demand MCP server instances with health monitoring
@@ -38,8 +38,7 @@ The platform uses a modern async-first architecture with polyglot persistence:
 | API Framework | FastAPI 0.110+ | High-performance async web framework |
 | ORM | SQLAlchemy 2.0 | Async database operations |
 | Structured Data | MySQL 8.0+ | Users, tools, deployments |
-| Document Store | MongoDB 6.0+ | Version history, task results |
-| Vector Database | Qdrant 1.7+ | Semantic search embeddings |
+| Document Store | MongoDB 6.0+ | Version history, task results, documents |
 | Cache | Redis 7.0+ | Session management, caching |
 | Task Queue | Celery 5.3+ | Async task processing |
 | Message Broker | RabbitMQ 3.12+ | Task queue broker |
@@ -54,7 +53,6 @@ Before you begin, ensure you have the following installed:
 - **MySQL**: 8.0 or higher
 - **MongoDB**: 6.0 or higher
 - **Redis**: 7.0 or higher
-- **Qdrant**: 1.7 or higher
 - **RabbitMQ**: 3.12 or higher
 - **Docker** (optional): For containerized deployment
 
@@ -96,7 +94,7 @@ cp .env.example .env
 
 # Edit .env with your configuration
 # IMPORTANT: Update the following:
-# - Database credentials (MySQL, MongoDB, Redis, Qdrant)
+# - Database credentials (MySQL, MongoDB, Redis)
 # - SECRET_KEY (generate with: python -c "import secrets; print(secrets.token_urlsafe(32))")
 # - OPENAI_API_KEY (for AI features)
 # - GITHUB_TOKEN (for GitHub integration)
@@ -107,9 +105,6 @@ cp .env.example .env
 ```bash
 # Run database migrations
 alembic upgrade head
-
-# Create Qdrant collection (if not auto-created)
-python -c "from app.core.database import init_qdrant; import asyncio; asyncio.run(init_qdrant())"
 ```
 
 #### 6. Start the services
@@ -232,7 +227,7 @@ For detailed API documentation with examples, see [docs/api/API_EXAMPLES.md](doc
 | `/api/v1/knowledge/documents` | POST | Upload document |
 | `/api/v1/knowledge/documents/{doc_id}` | GET | Get document |
 | `/api/v1/knowledge/documents/{doc_id}` | DELETE | Delete document |
-| `/api/v1/knowledge/search` | POST | Semantic search |
+| `/api/v1/knowledge/search` | POST | Text search |
 
 #### AI Analysis
 
@@ -411,7 +406,7 @@ All configuration is done through environment variables. See [.env.example](.env
 Key configuration areas:
 
 - **Application**: Debug mode, environment, logging
-- **Databases**: MySQL, MongoDB, Redis, Qdrant connection strings
+- **Databases**: MySQL, MongoDB, Redis connection strings
 - **Security**: JWT secret, token expiration, CORS settings
 - **External Services**: OpenAI API key, GitHub token
 - **Performance**: Rate limiting, worker concurrency
@@ -455,10 +450,6 @@ Response includes status for all dependencies:
     "redis": {
       "status": "healthy",
       "response_time_ms": 1
-    },
-    "qdrant": {
-      "status": "healthy",
-      "response_time_ms": 8
     },
     "rabbitmq": {
       "status": "healthy",
@@ -576,4 +567,3 @@ Built with:
 - [SQLAlchemy](https://www.sqlalchemy.org/) - SQL toolkit and ORM
 - [LangChain](https://python.langchain.com/) - LLM application framework
 - [Celery](https://docs.celeryq.dev/) - Distributed task queue
-- [Qdrant](https://qdrant.tech/) - Vector similarity search engine

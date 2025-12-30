@@ -10,8 +10,6 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool, AsyncAdaptedQueuePool
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from redis.asyncio import Redis, ConnectionPool
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams
 from app.core.config import settings
 
 # Import Base from models (defined in models/base.py)
@@ -29,11 +27,6 @@ mongo_db: Optional[AsyncIOMotorDatabase] = None
 # Redis client
 redis_client: Optional[Redis] = None
 redis_pool: Optional[ConnectionPool] = None
-
-# Qdrant client
-qdrant_client: Optional[QdrantClient] = None
-QDRANT_COLLECTION_NAME = "document_embeddings"
-EMBEDDING_DIMENSION = 1536  # OpenAI text-embedding-3-small dimension
 
 
 def get_mysql_url() -> str:
@@ -300,80 +293,6 @@ async def check_redis_connection() -> bool:
 
 
 # ============================================================================
-# Qdrant Configuration
-# ============================================================================
-
-async def init_qdrant() -> None:
-    """Initialize Qdrant client and create collection for document embeddings"""
-    global qdrant_client
-    
-    # Create Qdrant client
-    qdrant_client = QdrantClient(
-        host=settings.QDRANT_HOST,
-        port=settings.QDRANT_PORT,
-        api_key=settings.QDRANT_API_KEY,
-        timeout=10,  # Request timeout in seconds
-    )
-    
-    # Check if collection exists, create if not
-    try:
-        collections = qdrant_client.get_collections()
-        collection_names = [col.name for col in collections.collections]
-        
-        if QDRANT_COLLECTION_NAME not in collection_names:
-            # Create collection for document embeddings
-            qdrant_client.create_collection(
-                collection_name=QDRANT_COLLECTION_NAME,
-                vectors_config=VectorParams(
-                    size=EMBEDDING_DIMENSION,
-                    distance=Distance.COSINE,  # Cosine similarity for semantic search
-                ),
-            )
-    except Exception as e:
-        raise RuntimeError(f"Failed to initialize Qdrant collection: {e}")
-
-
-async def close_qdrant() -> None:
-    """Close Qdrant client"""
-    global qdrant_client
-    if qdrant_client:
-        qdrant_client.close()
-        qdrant_client = None
-
-
-def get_qdrant() -> QdrantClient:
-    """
-    Get Qdrant client instance.
-    
-    Usage:
-        qdrant = get_qdrant()
-        qdrant.upsert(
-            collection_name="document_embeddings",
-            points=[...]
-        )
-    """
-    if qdrant_client is None:
-        raise RuntimeError("Qdrant not initialized. Call init_qdrant() first.")
-    return qdrant_client
-
-
-async def check_qdrant_connection() -> bool:
-    """
-    Check if Qdrant connection is healthy.
-    Used for health checks.
-    """
-    if qdrant_client is None:
-        return False
-    
-    try:
-        # Try to get collections to verify connection
-        qdrant_client.get_collections()
-        return True
-    except Exception:
-        return False
-
-
-# ============================================================================
 # Helper Functions for Celery Tasks
 # ============================================================================
 
@@ -392,22 +311,6 @@ def get_mongodb_client() -> AsyncIOMotorClient:
             serverSelectionTimeoutMS=5000,
         )
     return mongo_client
-
-
-def get_qdrant_client() -> QdrantClient:
-    """
-    Get Qdrant client for Celery tasks.
-    Creates a new client if not initialized.
-    """
-    global qdrant_client
-    if qdrant_client is None:
-        qdrant_client = QdrantClient(
-            host=settings.QDRANT_HOST,
-            port=settings.QDRANT_PORT,
-            api_key=settings.QDRANT_API_KEY,
-            timeout=10,
-        )
-    return qdrant_client
 
 
 def get_redis_client() -> Redis:

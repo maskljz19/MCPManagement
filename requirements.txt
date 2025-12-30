@@ -17,8 +17,7 @@ pymongo>=4.5.0
 # Database - Redis
 redis>=5.0.0
 
-# Database - Vector Store
-qdrant-client>=1.7.0
+# Database - Vector Store (removed - hardware not supported)
 
 # Task Queue
 celery>=5.3.0

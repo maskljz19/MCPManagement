@@ -17,7 +17,6 @@ setup(
         "alembic>=1.12.0",
         "motor>=3.3.0",
         "redis>=5.0.0",
-        "qdrant-client>=1.7.0",
         "celery>=5.3.0",
         "langchain>=0.1.0",
         "PyGithub>=2.0.0",

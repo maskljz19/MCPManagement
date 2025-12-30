@@ -8,7 +8,6 @@ from app.core.database import (
     check_mysql_connection,
     check_mongodb_connection,
     check_redis_connection,
-    check_qdrant_connection,
 )
 
 
@@ -92,7 +91,6 @@ async def test_all_database_health_checks_independent():
         check_mysql_connection,
         check_mongodb_connection,
         check_redis_connection,
-        check_qdrant_connection,
     ]
     
     for check in health_checks:

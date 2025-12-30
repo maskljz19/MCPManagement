@@ -24,8 +24,7 @@ from app.core.config import settings
 from app.core.database import (
     init_mysql, close_mysql,
     init_mongodb, close_mongodb,
-    init_redis, close_redis,
-    init_qdrant, close_qdrant
+    init_redis, close_redis
 )
 
 
@@ -36,13 +35,11 @@ async def lifespan(app: FastAPI):
     await init_mysql()
     await init_mongodb()
     await init_redis()
-    await init_qdrant()
     yield
     # Shutdown: Close database connections
     await close_mysql()
     await close_mongodb()
     await close_redis()
-    await close_qdrant()
 
 
 app = FastAPI(

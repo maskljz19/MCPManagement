@@ -27,12 +27,6 @@ async def check_redis() -> bool:
     return await check_redis_connection()
 
 
-async def check_qdrant() -> bool:
-    """Check Qdrant connection health"""
-    from app.core.database import check_qdrant_connection
-    return await check_qdrant_connection()
-
-
 async def check_rabbitmq() -> bool:
     """Check RabbitMQ connection health"""
     try:
@@ -65,7 +59,6 @@ async def health_check() -> JSONResponse:
         "mysql": await check_mysql(),
         "mongodb": await check_mongodb(),
         "redis": await check_redis(),
-        "qdrant": await check_qdrant(),
         "rabbitmq": await check_rabbitmq()
     }
     

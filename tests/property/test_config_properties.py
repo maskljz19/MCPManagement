@@ -149,7 +149,6 @@ async def test_optional_config_fields_have_defaults():
         assert settings.MYSQL_PORT == 3306
         assert settings.REDIS_PORT == 6379
         assert settings.REDIS_DB == 0
-        assert settings.QDRANT_PORT == 6333
         assert settings.RABBITMQ_PORT == 5672
         assert settings.JWT_ALGORITHM == "HS256"
         assert settings.ACCESS_TOKEN_EXPIRE_MINUTES == 15

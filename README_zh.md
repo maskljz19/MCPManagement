@@ -6,7 +6,7 @@
 
 ### 核心功能
 - **MCP 工具管理**：完整的 CRUD 操作，支持版本历史跟踪
-- **知识库**：使用向量嵌入的语义搜索（Qdrant）
+- **知识库**：文档存储和基本文本搜索（MongoDB）
 - **AI 分析**：可行性分析、改进建议和自动配置生成
 - **GitHub 集成**：仓库同步和 webhook 处理
 - **动态部署**：按需 MCP 服务器实例，支持健康监控
@@ -38,8 +38,7 @@
 | API 框架 | FastAPI 0.110+ | 高性能异步 Web 框架 |
 | ORM | SQLAlchemy 2.0 | 异步数据库操作 |
 | 结构化数据 | MySQL 8.0+ | 用户、工具、部署 |
-| 文档存储 | MongoDB 6.0+ | 版本历史、任务结果 |
-| 向量数据库 | Qdrant 1.7+ | 语义搜索嵌入 |
+| 文档存储 | MongoDB 6.0+ | 版本历史、任务结果、文档 |
 | 缓存 | Redis 7.0+ | 会话管理、缓存 |
 | 任务队列 | Celery 5.3+ | 异步任务处理 |
 | 消息代理 | RabbitMQ 3.12+ | 任务队列代理 |
@@ -54,7 +53,6 @@
 - **MySQL**：8.0 或更高版本
 - **MongoDB**：6.0 或更高版本
 - **Redis**：7.0 或更高版本
-- **Qdrant**：1.7 或更高版本
 - **RabbitMQ**：3.12 或更高版本
 - **Docker**（可选）：用于容器化部署
 
@@ -96,7 +94,7 @@ cp .env.example .env
 
 # 编辑 .env 文件进行配置
 # 重要：更新以下内容：
-# - 数据库凭据（MySQL、MongoDB、Redis、Qdrant）
+# - 数据库凭据（MySQL、MongoDB、Redis）
 # - SECRET_KEY（生成方式：python -c "import secrets; print(secrets.token_urlsafe(32))"）
 # - OPENAI_API_KEY（用于 AI 功能）
 # - GITHUB_TOKEN（用于 GitHub 集成）
@@ -107,9 +105,6 @@ cp .env.example .env
 ```bash
 # 运行数据库迁移
 alembic upgrade head
-
-# 创建 Qdrant 集合（如果未自动创建）
-python -c "from app.core.database import init_qdrant; import asyncio; asyncio.run(init_qdrant())"
 ```
 
 #### 6. 启动服务
@@ -232,7 +227,7 @@ curl -X GET http://localhost:8000/api/v1/mcps \
 | `/api/v1/knowledge/documents` | POST | 上传文档 |
 | `/api/v1/knowledge/documents/{doc_id}` | GET | 获取文档 |
 | `/api/v1/knowledge/documents/{doc_id}` | DELETE | 删除文档 |
-| `/api/v1/knowledge/search` | POST | 语义搜索 |
+| `/api/v1/knowledge/search` | POST | 文本搜索 |
 
 #### AI 分析
 
@@ -411,7 +406,7 @@ alembic current
 主要配置区域：
 
 - **应用程序**：调试模式、环境、日志
-- **数据库**：MySQL、MongoDB、Redis、Qdrant 连接字符串
+- **数据库**：MySQL、MongoDB、Redis 连接字符串
 - **安全**：JWT 密钥、令牌过期、CORS 设置
 - **外部服务**：OpenAI API 密钥、GitHub 令牌
 - **性能**：速率限制、工作进程并发
@@ -455,10 +450,6 @@ curl http://localhost:8000/health
     "redis": {
       "status": "healthy",
       "response_time_ms": 1
-    },
-    "qdrant": {
-      "status": "healthy",
-      "response_time_ms": 8
     },
     "rabbitmq": {
       "status": "healthy",
@@ -576,4 +567,3 @@ docker-compose down
 - [SQLAlchemy](https://www.sqlalchemy.org/) - SQL 工具包和 ORM
 - [LangChain](https://python.langchain.com/) - LLM 应用程序框架
 - [Celery](https://docs.celeryq.dev/) - 分布式任务队列
-- [Qdrant](https://qdrant.tech/) - 向量相似性搜索引擎

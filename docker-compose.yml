@@ -60,26 +60,6 @@ services:
       - mcp-network
     restart: unless-stopped
 
-  # Qdrant Vector Database
-  qdrant:
-    image: qdrant/qdrant:v1.7.4
-    container_name: mcp-qdrant
-    ports:
-      - "${QDRANT_PORT:-6333}:6333"
-      - "6334:6334"
-    volumes:
-      - qdrant_data:/qdrant/storage
-    environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - mcp-network
-    restart: unless-stopped
-
   # RabbitMQ Message Broker
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
@@ -133,11 +113,6 @@ services:
       REDIS_DB: ${REDIS_DB:-0}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       
-      # Database - Qdrant
-      QDRANT_HOST: qdrant
-      QDRANT_PORT: 6333
-      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
-      
       # Message Broker
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
@@ -170,8 +145,6 @@ services:
       mongodb:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      qdrant:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -212,11 +185,6 @@ services:
       REDIS_PORT: 6379
       REDIS_DB: ${REDIS_DB:-0}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      
-      # Database - Qdrant
-      QDRANT_HOST: qdrant
-      QDRANT_PORT: 6333
-      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
       
       # Message Broker
       RABBITMQ_HOST: rabbitmq
@@ -317,8 +285,6 @@ volumes:
   mongodb_data:
     driver: local
   redis_data:
-    driver: local
-  qdrant_data:
     driver: local
   rabbitmq_data:
     driver: local

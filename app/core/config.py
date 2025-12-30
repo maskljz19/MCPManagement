@@ -33,11 +33,6 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_PASSWORD: Optional[str] = None
     
-    # Database - Qdrant
-    QDRANT_HOST: str = "localhost"
-    QDRANT_PORT: int = 6333
-    QDRANT_API_KEY: Optional[str] = None
-    
     # Message Broker - RabbitMQ
     RABBITMQ_HOST: str = "localhost"
     RABBITMQ_PORT: int = 5672
@@ -71,7 +66,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"  # json or text
     
-    @field_validator('MYSQL_PORT', 'REDIS_PORT', 'QDRANT_PORT', 'RABBITMQ_PORT')
+    @field_validator('MYSQL_PORT', 'REDIS_PORT', 'RABBITMQ_PORT')
     @classmethod
     def validate_port(cls, v: int, info) -> int:
         """Validate that port numbers are in the valid range (1-65535)"""

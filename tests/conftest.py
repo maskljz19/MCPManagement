@@ -6,8 +6,6 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from motor.motor_asyncio import AsyncIOMotorClient
 from redis.asyncio import Redis
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams
 from uuid import uuid4
 import os
 
@@ -15,7 +13,6 @@ from app.models.base import Base
 from app.services.mcp_manager import MCPManager
 from app.services.knowledge_service import KnowledgeBaseService
 from app.services.task_tracker import TaskTracker
-from app.core.database import QDRANT_COLLECTION_NAME, EMBEDDING_DIMENSION
 
 
 # ============================================================================
@@ -163,17 +160,13 @@ async def mcp_manager_fixture(db_session, mongo_client, redis_client):
 
 
 @pytest_asyncio.fixture
-async def knowledge_service_fixture(mongo_client, qdrant_client, redis_client):
+async def knowledge_service_fixture(mongo_client, redis_client):
     """Create KnowledgeBaseService instance with test dependencies"""
     # Get OpenAI API key from environment or use a test key
     openai_api_key = os.getenv("OPENAI_API_KEY", "test-key-for-mocking")
     
-    # Get the test collection name
-    test_collection_name = qdrant_client._test_collection_name
-    
     service = KnowledgeBaseService(
         mongo_db=mongo_client,
-        qdrant_client=qdrant_client,
         redis=redis_client,
         openai_api_key=openai_api_key
     )
