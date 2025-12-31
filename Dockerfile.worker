@@ -60,13 +60,13 @@ USER celeryuser
 # Celery worker configuration
 ENV CELERY_BROKER_URL="" \
     CELERY_RESULT_BACKEND="" \
-    CELERY_WORKER_CONCURRENCY=4 \
-    CELERY_WORKER_PREFETCH_MULTIPLIER=4 \
-    CELERY_WORKER_MAX_TASKS_PER_CHILD=1000
+    CELERY_WORKER_CONCURRENCY=2 \
+    CELERY_WORKER_PREFETCH_MULTIPLIER=2 \
+    CELERY_WORKER_MAX_TASKS_PER_CHILD=10
 
 # Health check for worker (checks if worker is responsive)
 HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
     CMD celery -A app.core.celery_app inspect ping -d celery@$HOSTNAME || exit 1
 
 # Default command - run Celery worker
-CMD ["celery", "-A", "app.core.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
+CMD ["celery", "-A", "app.core.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
