@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import (
     AsyncEngine
 )
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool, AsyncAdaptedQueuePool
+from sqlalchemy import text
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from redis.asyncio import Redis, ConnectionPool
 from app.core.config import settings
@@ -126,7 +127,7 @@ async def check_mysql_connection() -> bool:
     
     try:
         async with mysql_engine.connect() as conn:
-            await conn.execute("SELECT 1")
+            await conn.execute(text("SELECT 1"))
         return True
     except Exception:
         return False
