@@ -1,9 +1,7 @@
 """User model"""
 
 import enum
-from datetime import datetime
-from sqlalchemy import Column, String, Boolean, Enum, TIMESTAMP, Index
-from sqlalchemy.dialects.mysql import CHAR
+from sqlalchemy import Column, String, Boolean, Enum, Index
 from sqlalchemy.orm import relationship, validates
 from passlib.context import CryptContext
 from app.models.base import BaseModel
@@ -84,7 +82,7 @@ class UserModel(BaseModel):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(
-        Enum(UserRole),
+        Enum(UserRole, values_callable=lambda obj: [e.value for e in obj]),
         default=UserRole.VIEWER,
         nullable=False
     )

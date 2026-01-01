@@ -133,7 +133,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS}
       
       # Logging
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
       LOG_FORMAT: ${LOG_FORMAT:-json}
     ports:
       - "8000:8000"
@@ -202,7 +202,7 @@ services:
       CELERY_WORKER_MAX_TASKS_PER_CHILD: ${CELERY_WORKER_MAX_TASKS_PER_CHILD:-1000}
       
       # Logging
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
       LOG_FORMAT: ${LOG_FORMAT:-json}
     volumes:
       - ./logs:/app/logs
@@ -257,7 +257,7 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
       
       # Logging
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
       LOG_FORMAT: ${LOG_FORMAT:-json}
     volumes:
       - ./logs:/app/logs

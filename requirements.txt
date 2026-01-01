@@ -60,4 +60,5 @@ hypothesis>=6.92.0
 
 #
 email-validator
+starlette
 
