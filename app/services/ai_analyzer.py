@@ -159,20 +159,43 @@ Provide a complete, valid MCP configuration as a JSON object.""")
         
         Validates: Requirements 3.1
         """
-        # Format the prompt
-        format_instructions = self.feasibility_parser.get_format_instructions()
-        prompt = self.feasibility_prompt.format_messages(
-            config=json.dumps(config, indent=2),
-            format_instructions=format_instructions
-        )
-        
-        # Invoke LLM
-        response = await self.llm.ainvoke(prompt)
-        
-        # Parse response
-        report = self.feasibility_parser.parse(response.content)
-        
-        return report
+        try:
+            # Format the prompt
+            format_instructions = self.feasibility_parser.get_format_instructions()
+            prompt = self.feasibility_prompt.format_messages(
+                config=json.dumps(config, indent=2),
+                format_instructions=format_instructions
+            )
+            
+            # Invoke LLM
+            response = await self.llm.ainvoke(prompt)
+            
+            # Parse response
+            report = self.feasibility_parser.parse(response.content)
+            
+            return report
+            
+        except Exception as e:
+            # Log the error
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"OpenAI API error in feasibility analysis: {str(e)}", exc_info=True)
+            
+            # Determine error type and provide helpful message
+            error_msg = str(e).lower()
+            if "api key" in error_msg or "authentication" in error_msg:
+                error_detail = "OpenAI API 密钥无效或未配置。请在环境变量中设置有效的 OPENAI_API_KEY。"
+            elif "rate limit" in error_msg:
+                error_detail = "OpenAI API 速率限制已达到。请稍后重试或升级您的 OpenAI 账户。"
+            elif "timeout" in error_msg or "connection" in error_msg:
+                error_detail = "无法连接到 OpenAI API。请检查网络连接、防火墙设置或 OPENAI_API_BASE 配置。"
+            elif "model" in error_msg:
+                error_detail = "指定的 AI 模型不可用。请检查您的 OpenAI 账户权限。"
+            else:
+                error_detail = f"AI 分析服务暂时不可用: {str(e)}"
+            
+            # Re-raise with more context
+            raise RuntimeError(f"Connection error. {error_detail}")
     
     async def suggest_improvements(
         self,
@@ -193,33 +216,53 @@ Provide a complete, valid MCP configuration as a JSON object.""")
         
         Validates: Requirements 3.2
         """
-        # Format the prompt
-        prompt = self.improvements_prompt.format_messages(
-            tool_name=tool_name,
-            description=description or "No description provided",
-            config=json.dumps(config, indent=2)
-        )
-        
-        # Invoke LLM
-        response = await self.llm.ainvoke(prompt)
-        
-        # Parse JSON response
         try:
-            improvements_data = json.loads(response.content)
-            improvements = [Improvement(**item) for item in improvements_data]
-        except (json.JSONDecodeError, ValueError) as e:
-            # Fallback: try to extract JSON from markdown code blocks
-            content = response.content
-            if "```json" in content:
-                json_start = content.find("```json") + 7
-                json_end = content.find("```", json_start)
-                json_str = content[json_start:json_end].strip()
-                improvements_data = json.loads(json_str)
+            # Format the prompt
+            prompt = self.improvements_prompt.format_messages(
+                tool_name=tool_name,
+                description=description or "No description provided",
+                config=json.dumps(config, indent=2)
+            )
+            
+            # Invoke LLM
+            response = await self.llm.ainvoke(prompt)
+            
+            # Parse JSON response
+            try:
+                improvements_data = json.loads(response.content)
                 improvements = [Improvement(**item) for item in improvements_data]
+            except (json.JSONDecodeError, ValueError) as e:
+                # Fallback: try to extract JSON from markdown code blocks
+                content = response.content
+                if "```json" in content:
+                    json_start = content.find("```json") + 7
+                    json_end = content.find("```", json_start)
+                    json_str = content[json_start:json_end].strip()
+                    improvements_data = json.loads(json_str)
+                    improvements = [Improvement(**item) for item in improvements_data]
+                else:
+                    raise ValueError(f"Failed to parse improvements response: {e}")
+            
+            return improvements
+            
+        except Exception as e:
+            # Log the error
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"OpenAI API error in improvement suggestions: {str(e)}", exc_info=True)
+            
+            # Determine error type and provide helpful message
+            error_msg = str(e).lower()
+            if "api key" in error_msg or "authentication" in error_msg:
+                error_detail = "OpenAI API 密钥无效或未配置。"
+            elif "rate limit" in error_msg:
+                error_detail = "OpenAI API 速率限制已达到。"
+            elif "timeout" in error_msg or "connection" in error_msg:
+                error_detail = "无法连接到 OpenAI API。"
             else:
-                raise ValueError(f"Failed to parse improvements response: {e}")
-        
-        return improvements
+                error_detail = f"AI 分析服务暂时不可用: {str(e)}"
+            
+            raise RuntimeError(f"Connection error. {error_detail}")
     
     async def generate_config(
         self,
@@ -236,32 +279,52 @@ Provide a complete, valid MCP configuration as a JSON object.""")
         
         Validates: Requirements 3.3
         """
-        # Format the prompt
-        prompt = self.config_generation_prompt.format_messages(
-            tool_name=requirements.tool_name,
-            description=requirements.description,
-            capabilities=", ".join(requirements.capabilities),
-            constraints=json.dumps(requirements.constraints, indent=2)
-        )
-        
-        # Invoke LLM
-        response = await self.llm.ainvoke(prompt)
-        
-        # Parse JSON response
         try:
-            config = json.loads(response.content)
-        except json.JSONDecodeError:
-            # Fallback: try to extract JSON from markdown code blocks
-            content = response.content
-            if "```json" in content:
-                json_start = content.find("```json") + 7
-                json_end = content.find("```", json_start)
-                json_str = content[json_start:json_end].strip()
-                config = json.loads(json_str)
+            # Format the prompt
+            prompt = self.config_generation_prompt.format_messages(
+                tool_name=requirements.tool_name,
+                description=requirements.description,
+                capabilities=", ".join(requirements.capabilities),
+                constraints=json.dumps(requirements.constraints, indent=2)
+            )
+            
+            # Invoke LLM
+            response = await self.llm.ainvoke(prompt)
+            
+            # Parse JSON response
+            try:
+                config = json.loads(response.content)
+            except json.JSONDecodeError:
+                # Fallback: try to extract JSON from markdown code blocks
+                content = response.content
+                if "```json" in content:
+                    json_start = content.find("```json") + 7
+                    json_end = content.find("```", json_start)
+                    json_str = content[json_start:json_end].strip()
+                    config = json.loads(json_str)
+                else:
+                    raise ValueError("Failed to parse generated configuration")
+            
+            return config
+            
+        except Exception as e:
+            # Log the error
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"OpenAI API error in config generation: {str(e)}", exc_info=True)
+            
+            # Determine error type and provide helpful message
+            error_msg = str(e).lower()
+            if "api key" in error_msg or "authentication" in error_msg:
+                error_detail = "OpenAI API 密钥无效或未配置。"
+            elif "rate limit" in error_msg:
+                error_detail = "OpenAI API 速率限制已达到。"
+            elif "timeout" in error_msg or "connection" in error_msg:
+                error_detail = "无法连接到 OpenAI API。"
             else:
-                raise ValueError("Failed to parse generated configuration")
-        
-        return config
+                error_detail = f"AI 分析服务暂时不可用: {str(e)}"
+            
+            raise RuntimeError(f"Connection error. {error_detail}")
     
     async def store_analysis_result(
         self,

@@ -125,6 +125,33 @@ class KnowledgeBaseService:
             updated_at=mongo_doc["updated_at"]
         )
     
+    async def list_documents(self, limit: int = 20, skip: int = 0) -> List[Document]:
+        """
+        List documents from MongoDB with pagination.
+        
+        Args:
+            limit: Maximum number of documents to return
+            skip: Number of documents to skip (for pagination)
+            
+        Returns:
+            List of documents
+        """
+        cursor = self.documents_collection.find().skip(skip).limit(limit).sort("created_at", -1)
+        
+        documents = []
+        async for mongo_doc in cursor:
+            documents.append(Document(
+                document_id=UUID(mongo_doc["document_id"]),
+                title=mongo_doc["title"],
+                content=mongo_doc["content"],
+                metadata=mongo_doc.get("metadata", {}),
+                embedding_id=UUID(mongo_doc["embedding_id"]) if mongo_doc.get("embedding_id") else None,
+                created_at=mongo_doc["created_at"],
+                updated_at=mongo_doc["updated_at"]
+            ))
+        
+        return documents
+    
     async def delete_document(self, doc_id: UUID) -> bool:
         """
         Delete a document from MongoDB.
