@@ -72,6 +72,30 @@ async def connect_repository(
         )
 
 
+@router.get("/connections", response_model=list[GitHubConnection])
+async def list_connections(
+    current_user: UserModel = Depends(get_current_user),
+    github_service: GitHubIntegrationService = Depends(get_github_service)
+):
+    """
+    List all GitHub connections for the current user.
+    
+    Returns all repository connections associated with the authenticated user.
+    
+    Args:
+        current_user: Currently authenticated user
+        github_service: GitHub integration service
+        
+    Returns:
+        List of GitHub connection objects
+        
+    Raises:
+        HTTPException 401: If user is not authenticated
+    """
+    connections = await github_service.list_user_connections(user_id=current_user.id)
+    return connections
+
+
 @router.post("/sync/{connection_id}", response_model=SyncTriggerResponse)
 async def trigger_sync(
     connection_id: UUID,

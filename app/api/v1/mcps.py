@@ -231,13 +231,13 @@ async def list_mcp_tools(
     # Get paginated results
     result = await mcp_manager.list_tools(filters, pagination)
     
-    # Return as dict with serialized items
+    # Return as dict with serialized items matching frontend expectations
     return {
         "items": [tool.model_dump() for tool in result.items],
         "total": result.total,
         "page": result.page,
-        "page_size": result.page_size,
-        "total_pages": result.total_pages
+        "limit": result.page_size,  # Frontend expects 'limit' not 'page_size'
+        "pages": result.total_pages  # Frontend expects 'pages' not 'total_pages'
     }
 
 

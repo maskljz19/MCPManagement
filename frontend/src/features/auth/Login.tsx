@@ -64,15 +64,12 @@ export default function Login() {
           description: `欢迎回来, ${user.username}!`,
         });
 
-        // Redirect to dashboard
-        // WebSocket connection will be established automatically by AppLayout
-        navigate('/dashboard');
+        // Navigate to dashboard
+        navigate('/dashboard', { replace: true });
       } else {
         throw new Error('未能获取认证令牌');
       }
     } catch (error: any) {
-      console.error('Login error:', error);
-      
       // Display error message
       const errorMessage = error.response?.data?.detail || error.message || '登录失败，请检查您的凭据';
       

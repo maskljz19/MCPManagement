@@ -72,6 +72,47 @@ async def upload_document(
         )
 
 
+@router.get("/documents", response_model=dict)
+@require_permission("knowledge", "read")
+async def list_documents(
+    limit: int = 20,
+    current_user: UserModel = Depends(get_current_user),
+    knowledge_service: KnowledgeBaseService = Depends(get_knowledge_service)
+):
+    """
+    List all documents in the knowledge base.
+    
+    Returns a paginated list of documents from MongoDB.
+    
+    Args:
+        limit: Maximum number of documents to return
+        current_user: Currently authenticated user
+        knowledge_service: Knowledge Base service
+        
+    Returns:
+        Paginated response with documents
+        
+    Raises:
+        HTTPException 401: If user is not authenticated
+        HTTPException 403: If user lacks permission
+    """
+    try:
+        documents = await knowledge_service.list_documents(limit=limit)
+        # Return in paginated format matching frontend expectations
+        return {
+            "items": documents,
+            "total": len(documents),
+            "page": 1,
+            "limit": limit,
+            "pages": 1
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list documents: {str(e)}"
+        )
+
+
 @router.get("/documents/{doc_id}", response_model=Document)
 @require_permission("knowledge", "read")
 async def get_document(

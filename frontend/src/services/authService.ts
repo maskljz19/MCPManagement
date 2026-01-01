@@ -1,5 +1,6 @@
 import axiosInstance from '../lib/axios';
 import type { User, TokenResponse, LoginCredentials, RegisterData } from '../types';
+import { decodeJWT } from '../utils/jwt';
 
 class AuthService {
   private static instance: AuthService;
@@ -116,26 +117,49 @@ class AuthService {
   }
 
   /**
+   * Extract user information from JWT token
+   */
+  private getUserFromToken(token: string): User | null {
+    const payload = decodeJWT(token);
+    if (!payload) {
+      return null;
+    }
+
+    // Validate role
+    const validRoles = ['admin', 'developer', 'viewer'] as const;
+    const role = validRoles.includes(payload.role as any) 
+      ? (payload.role as 'admin' | 'developer' | 'viewer')
+      : 'viewer';
+
+    return {
+      id: payload.user_id,
+      username: payload.username,
+      email: '', // Email is not in the token, will be empty
+      role: role,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  /**
    * Login with username and password
    */
   public async login(credentials: LoginCredentials): Promise<User> {
-    const formData = new URLSearchParams();
-    formData.append('username', credentials.username);
-    formData.append('password', credentials.password);
-
-    const response = await axiosInstance.post<TokenResponse>('/api/v1/auth/login', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+    const response = await axiosInstance.post<TokenResponse>('/api/v1/auth/login', {
+      username: credentials.username,
+      password: credentials.password,
     });
 
     const { access_token, refresh_token } = response.data;
     this.setTokens(access_token, refresh_token);
 
-    // Fetch user profile
-    const user = await this.fetchCurrentUser();
-    this.setCurrentUser(user);
+    // Extract user info from JWT token
+    const user = this.getUserFromToken(access_token);
+    if (!user) {
+      throw new Error('Failed to extract user information from token');
+    }
 
+    this.setCurrentUser(user);
     return user;
   }
 
@@ -175,14 +199,6 @@ class AuthService {
   }
 
   /**
-   * Fetch the current user profile
-   */
-  private async fetchCurrentUser(): Promise<User> {
-    const response = await axiosInstance.get<User>('/api/v1/auth/me');
-    return response.data;
-  }
-
-  /**
    * Get user profile (with caching)
    */
   public async getUserProfile(): Promise<User> {
@@ -190,9 +206,17 @@ class AuthService {
       return this.currentUser;
     }
 
-    const user = await this.fetchCurrentUser();
-    this.setCurrentUser(user);
-    return user;
+    // Try to get user from stored token
+    const token = this.getAccessToken();
+    if (token) {
+      const user = this.getUserFromToken(token);
+      if (user) {
+        this.setCurrentUser(user);
+        return user;
+      }
+    }
+
+    throw new Error('No valid authentication token found');
   }
 }
 

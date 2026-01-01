@@ -47,14 +47,9 @@ class APIClient {
      * Login with username and password
      */
     login: async (credentials: LoginCredentials): Promise<TokenResponse> => {
-      const formData = new URLSearchParams();
-      formData.append('username', credentials.username);
-      formData.append('password', credentials.password);
-
-      const response = await axiosInstance.post<TokenResponse>('/api/v1/auth/login', formData, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+      const response = await axiosInstance.post<TokenResponse>('/api/v1/auth/login', {
+        username: credentials.username,
+        password: credentials.password,
       });
       return response.data;
     },
@@ -76,14 +71,6 @@ class APIClient {
       await axiosInstance.post('/api/v1/auth/logout', {
         refresh_token: refreshToken,
       });
-    },
-
-    /**
-     * Get current user profile
-     */
-    me: async (): Promise<User> => {
-      const response = await axiosInstance.get<User>('/api/v1/auth/me');
-      return response.data;
     },
   };
 
@@ -246,14 +233,14 @@ class APIClient {
      * Disconnect a GitHub repository
      */
     disconnect: async (id: string): Promise<void> => {
-      await axiosInstance.delete(`/api/v1/github/connections/${id}`);
+      await axiosInstance.delete(`/api/v1/github/disconnect/${id}`);
     },
 
     /**
      * Sync a GitHub repository
      */
     sync: async (id: string): Promise<TaskResponse> => {
-      const response = await axiosInstance.post<TaskResponse>(`/api/v1/github/connections/${id}/sync`);
+      const response = await axiosInstance.post<TaskResponse>(`/api/v1/github/sync/${id}`);
       return response.data;
     },
 

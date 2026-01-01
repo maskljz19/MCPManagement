@@ -51,7 +51,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function Register() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { setAuth } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'admin' | 'developer' | 'viewer'>('developer');
 
@@ -93,9 +93,8 @@ export default function Register() {
           description: `欢迎加入, ${user.username}!`,
         });
 
-        // Redirect to dashboard
-        // WebSocket connection will be established automatically by AppLayout
-        navigate('/dashboard');
+        // Navigate to dashboard
+        navigate('/dashboard', { replace: true });
       } else {
         throw new Error('注册成功但未能获取认证令牌');
       }

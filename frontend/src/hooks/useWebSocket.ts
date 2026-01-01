@@ -31,7 +31,6 @@ export function useWebSocket() {
 
     // Set up event handlers
     const handleConnected = () => {
-      console.log('[useWebSocket] WebSocket connected');
       setStatus('connected');
       setConnected(true);
       setError(null);
@@ -39,25 +38,21 @@ export function useWebSocket() {
     };
 
     const handleDisconnected = () => {
-      console.log('[useWebSocket] WebSocket disconnected');
       setStatus('disconnected');
       setConnected(false);
     };
 
     const handleReconnecting = (data: { attempt: number; maxAttempts: number }) => {
-      console.log(`[useWebSocket] Reconnecting (${data.attempt}/${data.maxAttempts})`);
       setStatus('reconnecting');
       incrementReconnectAttempts();
     };
 
     const handleReconnectFailed = () => {
-      console.error('[useWebSocket] Reconnection failed');
       setStatus('error');
       setError('无法连接到服务器，请刷新页面重试');
     };
 
     const handleError = (data: { error: string }) => {
-      console.error('[useWebSocket] WebSocket error:', data.error);
       setStatus('error');
       setError(data.error);
     };
@@ -71,7 +66,6 @@ export function useWebSocket() {
 
     // Connect to WebSocket if not already connected
     if (!websocketClient.isConnected()) {
-      console.log('[useWebSocket] Connecting to WebSocket...');
       setStatus('connecting');
       websocketClient.connect(accessToken);
     } else {

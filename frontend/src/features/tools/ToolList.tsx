@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
@@ -15,6 +15,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
+import { usePermissions } from '@/hooks/usePermissions';
 import ToolCard from './components/ToolCard';
 
 /**
@@ -25,6 +26,7 @@ import ToolCard from './components/ToolCard';
 export default function ToolList() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canCreate, canRead } = usePermissions();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -33,7 +35,7 @@ export default function ToolList() {
   // Debounce search to reduce API calls (waits 500ms after user stops typing)
   const debouncedSearch = useDebounce(search, 500);
 
-  // Fetch tools with pagination and filters
+  // Fetch tools with pagination and filters - only if user has read permission
   const { data, isLoading, error } = useQuery({
     queryKey: ['tools', page, debouncedSearch, statusFilter],
     queryFn: async () => {
@@ -52,7 +54,19 @@ export default function ToolList() {
 
       return apiClient.tools.list(params);
     },
+    enabled: canRead('mcps'), // Only fetch if user has read permission
   });
+
+  // Show error toast if query fails - use useEffect to prevent infinite loop
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: '加载失败',
+        description: '无法加载工具列表，请稍后重试。',
+        variant: 'destructive',
+      });
+    }
+  }, [error, toast]);
 
   // Memoize handlers to prevent recreation on every render
   const handleSearchChange = useCallback((value: string) => {
@@ -84,13 +98,21 @@ export default function ToolList() {
   // Memoize skeleton array to prevent recreation
   const skeletonArray = useMemo(() => Array.from({ length: 6 }), []);
 
-  // Show error toast if query fails
-  if (error) {
-    toast({
-      title: '加载失败',
-      description: '无法加载工具列表，请稍后重试。',
-      variant: 'destructive',
-    });
+  // Show permission denied message if user doesn't have read access
+  if (!canRead('mcps')) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">MCP 工具</h1>
+          <p className="text-muted-foreground mt-1">
+            管理和浏览您的 MCP 工具集合
+          </p>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">您没有权限访问此功能</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -103,10 +125,12 @@ export default function ToolList() {
             管理和浏览您的 MCP 工具集合
           </p>
         </div>
-        <Button onClick={handleCreateTool}>
-          <Plus className="mr-2 h-4 w-4" />
-          创建工具
-        </Button>
+        {canCreate('mcps') && (
+          <Button onClick={handleCreateTool}>
+            <Plus className="mr-2 h-4 w-4" />
+            创建工具
+          </Button>
+        )}
       </div>
 
       {/* Filters */}

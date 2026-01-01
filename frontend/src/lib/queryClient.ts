@@ -68,11 +68,8 @@ export const queryClient = new QueryClient({
       // Unused data is kept in cache for 10 minutes before being garbage collected
       gcTime: 10 * 60 * 1000,
       
-      // Retry configuration
-      // Retry failed requests up to 3 times
-      retry: 3,
-      // Exponential backoff: 1s, 2s, 4s (max 30s)
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      // Retry configuration - DISABLED to prevent multiple failed requests
+      retry: false,
       
       // Refetch configuration
       // Automatically refetch when window regains focus
@@ -91,10 +88,8 @@ export const queryClient = new QueryClient({
       structuralSharing: true,
     },
     mutations: {
-      // Retry configuration for mutations
-      // Retry failed mutations once
-      retry: 1,
-      retryDelay: 1000,
+      // Retry configuration for mutations - DISABLED
+      retry: false,
       
       // Network mode
       // Only run mutations when online

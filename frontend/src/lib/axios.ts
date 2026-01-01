@@ -59,6 +59,13 @@ axiosInstance.interceptors.response.use(
 
     // Handle 401 errors - attempt token refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Skip token refresh for auth endpoints
+      if (originalRequest.url?.includes('/auth/login') || 
+          originalRequest.url?.includes('/auth/register') ||
+          originalRequest.url?.includes('/auth/refresh')) {
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
@@ -81,10 +88,11 @@ axiosInstance.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token');
 
       if (!refreshToken) {
-        // No refresh token available, redirect to login
+        // No refresh token available, clear auth and reject
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        localStorage.removeItem('auth-storage');
+        isRefreshing = false;
         return Promise.reject(error);
       }
 
@@ -113,11 +121,11 @@ axiosInstance.interceptors.response.use(
         // Retry original request
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
+        // Refresh failed, clear tokens
         processQueue(refreshError as Error, null);
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        localStorage.removeItem('auth-storage');
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

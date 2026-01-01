@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -25,6 +26,7 @@ interface NavItem {
   titleKey: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  resource?: 'mcps' | 'knowledge' | 'deployments' | 'github' | 'analysis' | 'apiKeys';
 }
 
 const navItems: NavItem[] = [
@@ -37,31 +39,37 @@ const navItems: NavItem[] = [
     titleKey: 'nav.tools',
     href: '/tools',
     icon: Wrench,
+    resource: 'mcps',
   },
   {
     titleKey: 'nav.knowledge',
     href: '/knowledge',
     icon: BookOpen,
+    resource: 'knowledge',
   },
   {
     titleKey: 'nav.analysis',
     href: '/analysis',
     icon: Sparkles,
+    resource: 'analysis',
   },
   {
     titleKey: 'nav.github',
     href: '/github',
     icon: Github,
+    resource: 'github',
   },
   {
     titleKey: 'nav.deployments',
     href: '/deployments',
     icon: Rocket,
+    resource: 'deployments',
   },
   {
     titleKey: 'nav.apiKeys',
     href: '/api-keys',
     icon: Key,
+    resource: 'apiKeys',
   },
 ];
 
@@ -84,11 +92,20 @@ export const Sidebar = memo(function Sidebar({ collapsed, onToggle }: SidebarPro
   const location = useLocation();
   const { user } = useAuthStore();
   const { t } = useI18n();
+  const { canRead } = usePermissions();
 
   // Memoize user initial to avoid recalculation on every render
   const userInitial = useMemo(() => {
     return user?.username.charAt(0).toUpperCase() || '';
   }, [user?.username]);
+
+  // Filter nav items based on permissions
+  const visibleNavItems = useMemo(() => {
+    return navItems.filter(item => {
+      if (!item.resource) return true; // Always show dashboard
+      return canRead(item.resource);
+    });
+  }, [canRead]);
 
   // Handle keyboard navigation for mobile overlay
   const handleOverlayKeyDown = (e: React.KeyboardEvent) => {
@@ -162,7 +179,7 @@ export const Sidebar = memo(function Sidebar({ collapsed, onToggle }: SidebarPro
           aria-label={t('nav.dashboard')}
         >
           <ul className="space-y-1 px-2" role="list">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname.startsWith(item.href);
               const title = t(item.titleKey);
