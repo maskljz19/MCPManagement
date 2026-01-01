@@ -34,7 +34,21 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 // Request interceptor - adds authentication token to requests
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('access_token');
+    // Try to get token from localStorage first (primary source)
+    let token = localStorage.getItem('access_token');
+    
+    // If not in localStorage, try to get from auth-storage (Zustand persist)
+    if (!token) {
+      try {
+        const authStorage = localStorage.getItem('auth-storage');
+        if (authStorage) {
+          const parsed = JSON.parse(authStorage);
+          token = parsed.state?.accessToken || null;
+        }
+      } catch (e) {
+        console.error('Failed to parse auth-storage:', e);
+      }
+    }
     
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;

@@ -21,7 +21,7 @@ from app.core.config import settings
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # Don't auto-error, let get_current_user handle it
 
 
 async def get_auth_service(
@@ -345,6 +345,18 @@ async def get_current_user(
     from app.core.logging_config import get_logger
     
     logger = get_logger(__name__)
+    
+    # Check if credentials were provided
+    if credentials is None:
+        logger.warning(
+            "no_credentials_provided",
+            context="auth.get_current_user"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
     
     try:
         token = credentials.credentials
