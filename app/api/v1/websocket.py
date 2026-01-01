@@ -12,6 +12,8 @@ from app.core.security import verify_token
 from app.core.database import get_redis
 from app.services.task_tracker import TaskTracker
 from redis.asyncio import Redis
+from app.api.v1.auth import get_current_user
+from app.models.user import UserModel
 import structlog
 
 logger = structlog.get_logger()
@@ -549,13 +551,13 @@ async def sse_endpoint(
 @router.post("/broadcast")
 async def broadcast_message(
     message: Dict[str, Any],
-    request: Request
+    current_user: UserModel = Depends(get_current_user)
 ):
     """
     Broadcast message to all connected WebSocket clients.
     
-    This endpoint is typically used by internal services or admin users
-    to send system-wide notifications.
+    This endpoint is restricted to admin users only for sending
+    system-wide notifications.
     
     Request Body:
     {
@@ -566,22 +568,11 @@ async def broadcast_message(
     
     Validates: Requirements 13.5
     """
-    # Verify authentication
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
+    # Check if user is admin
+    if not current_user.is_admin():
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization header"
-        )
-    
-    token = auth_header.split(" ")[1]
-    
-    try:
-        user_id = await authenticate_websocket(token)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e)
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin users can broadcast messages"
         )
     
     # Prepare broadcast message
@@ -589,7 +580,8 @@ async def broadcast_message(
         "type": "broadcast",
         "message": message,
         "timestamp": datetime.utcnow().isoformat(),
-        "sender": user_id
+        "sender": str(current_user.id),
+        "sender_username": current_user.username
     }
     
     # Broadcast to all connections

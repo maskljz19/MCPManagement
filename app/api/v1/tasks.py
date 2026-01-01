@@ -7,6 +7,8 @@ from typing import Dict, Any, Optional
 from app.core.database import get_redis
 from app.services.task_tracker import TaskTracker
 from redis.asyncio import Redis
+from app.api.v1.auth import get_current_user
+from app.models.user import UserModel
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -20,6 +22,7 @@ def get_task_tracker(redis: Redis = Depends(get_redis)) -> TaskTracker:
 @router.get("/{task_id}", response_model=Dict[str, Any])
 async def get_task_status(
     task_id: UUID,
+    current_user: UserModel = Depends(get_current_user),
     tracker: TaskTracker = Depends(get_task_tracker)
 ) -> Dict[str, Any]:
     """
@@ -57,6 +60,7 @@ async def get_task_status(
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(
     task_id: UUID,
+    current_user: UserModel = Depends(get_current_user),
     tracker: TaskTracker = Depends(get_task_tracker)
 ) -> None:
     """

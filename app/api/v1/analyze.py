@@ -21,6 +21,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from redis.asyncio import Redis
 from app.api.v1.auth import get_current_user
 from app.models.user import UserModel
+from app.api.dependencies import require_permission
 
 
 router = APIRouter(prefix="/analyze", tags=["ai-analysis"])
@@ -44,6 +45,7 @@ def get_task_tracker(redis: Redis = Depends(get_redis)) -> TaskTracker:
 
 
 @router.post("/feasibility", response_model=Dict[str, Any])
+@require_permission("analyze", "create")
 async def analyze_feasibility(
     config: Dict[str, Any],
     tool_name: str = None,
@@ -113,6 +115,7 @@ async def analyze_feasibility(
 
 
 @router.post("/improvements", response_model=Dict[str, Any])
+@require_permission("analyze", "create")
 async def get_improvements(
     tool_name: str,
     description: str,
@@ -196,6 +199,7 @@ async def get_improvements(
 
 
 @router.post("/generate-config", response_model=Dict[str, Any])
+@require_permission("analyze", "create")
 async def generate_configuration(
     requirements: ConfigRequirements,
     async_mode: bool = False,

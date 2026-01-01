@@ -1,12 +1,14 @@
 """Health Check Endpoint"""
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, Depends
 from fastapi.responses import JSONResponse, Response
 from typing import Dict, Any
 import asyncio
 import time
 from app.core.monitoring import get_metrics, get_metrics_content_type
 from app.core.config import settings
+from app.api.v1.auth import get_current_user
+from app.models.user import UserModel
 
 router = APIRouter(tags=["health"])
 
@@ -131,11 +133,14 @@ async def simple_health_check() -> JSONResponse:
 
 
 @router.get("/metrics")
-async def metrics() -> Response:
+async def metrics(
+    current_user: UserModel = Depends(get_current_user)
+) -> Response:
     """
     Prometheus metrics endpoint.
     
     Returns metrics in Prometheus text format for scraping by Prometheus server.
+    Requires authentication to prevent unauthorized access to system metrics.
     
     **Requirements: 12.1**
     """

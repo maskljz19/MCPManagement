@@ -16,6 +16,7 @@ from app.schemas.github import (
 )
 from app.api.v1.auth import get_current_user
 from app.models.user import UserModel
+from app.api.dependencies import require_permission
 
 
 router = APIRouter(prefix="/github", tags=["GitHub Integration"])
@@ -29,6 +30,7 @@ async def get_github_service(
 
 
 @router.post("/connect", response_model=GitHubConnection, status_code=status.HTTP_201_CREATED)
+@require_permission("github", "create")
 async def connect_repository(
     connection_data: GitHubConnectionCreate,
     current_user: UserModel = Depends(get_current_user),
@@ -73,6 +75,7 @@ async def connect_repository(
 
 
 @router.get("/connections", response_model=list[GitHubConnection])
+@require_permission("github", "read")
 async def list_connections(
     current_user: UserModel = Depends(get_current_user),
     github_service: GitHubIntegrationService = Depends(get_github_service)
@@ -97,6 +100,7 @@ async def list_connections(
 
 
 @router.post("/sync/{connection_id}", response_model=SyncTriggerResponse)
+@require_permission("github", "update")
 async def trigger_sync(
     connection_id: UUID,
     access_token: str = Header(..., alias="X-GitHub-Token"),
@@ -140,6 +144,7 @@ async def trigger_sync(
 
 
 @router.delete("/disconnect/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
+@require_permission("github", "delete")
 async def disconnect_repository(
     connection_id: UUID,
     current_user: UserModel = Depends(get_current_user),

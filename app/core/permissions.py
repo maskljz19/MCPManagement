@@ -20,19 +20,24 @@ ROLE_PERMISSIONS = {
         "knowledge:read",
         "knowledge:update",
         "knowledge:delete",
-        "deployments:read",
         "deployments:create",
+        "deployments:read",
+        "deployments:update",
+        "deployments:delete",
         "github:create",
         "github:read",
         "github:update",
         "github:delete",
         "analyze:create",
-        "analyze:read"
+        "analyze:read",
+        "tasks:read",
+        "tasks:delete"
     ],
     UserRole.VIEWER: [
         "mcps:read",
         "knowledge:read",
-        "deployments:read"
+        "deployments:read",
+        "tasks:read"
     ]
 }
 

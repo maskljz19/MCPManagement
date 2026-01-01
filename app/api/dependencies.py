@@ -25,12 +25,23 @@ def require_permission(resource: str, action: str):
     Example:
         @router.post("/mcps")
         @require_permission("mcps", "create")
-        async def create_mcp_tool(...):
+        async def create_mcp_tool(..., current_user: UserModel = Depends(get_current_user)):
             pass
+    
+    IMPORTANT: The endpoint function MUST include current_user parameter with Depends(get_current_user)
     """
     def decorator(func: Callable):
         @wraps(func)
-        async def wrapper(*args, current_user: UserModel = Depends(get_current_user), **kwargs):
+        async def wrapper(*args, **kwargs):
+            # Extract current_user from kwargs (it should be injected by FastAPI)
+            current_user = kwargs.get('current_user')
+            
+            if current_user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication required"
+                )
+            
             # Check if user has permission
             if not check_permission(current_user.role, resource, action):
                 raise HTTPException(
@@ -39,7 +50,7 @@ def require_permission(resource: str, action: str):
                 )
             
             # Call the original function
-            return await func(*args, current_user=current_user, **kwargs)
+            return await func(*args, **kwargs)
         
         return wrapper
     return decorator

@@ -8,7 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.api.dependencies import get_current_user
+from app.api.dependencies import require_permission
+from app.api.v1.auth import get_current_user
 from app.models.user import UserModel
 from app.models.deployment import MCPDeploymentModel, DeploymentStatus
 from app.schemas.deployment import (
@@ -34,6 +35,7 @@ def get_mcp_server_manager(db: AsyncSession = Depends(get_db)) -> MCPServerManag
     summary="Deploy MCP Tool",
     description="Deploy an MCP tool as a running server instance"
 )
+@require_permission("deployments", "create")
 async def deploy_mcp_tool(
     deployment_data: DeploymentCreate,
     current_user: UserModel = Depends(get_current_user),
@@ -75,6 +77,7 @@ async def deploy_mcp_tool(
     summary="Get Deployment Status",
     description="Retrieve the status and details of a specific deployment"
 )
+@require_permission("deployments", "read")
 async def get_deployment(
     deployment_id: UUID,
     current_user: UserModel = Depends(get_current_user),
@@ -109,6 +112,7 @@ async def get_deployment(
     summary="Stop Deployment",
     description="Stop a running MCP deployment"
 )
+@require_permission("deployments", "delete")
 async def stop_deployment(
     deployment_id: UUID,
     current_user: UserModel = Depends(get_current_user),
@@ -150,6 +154,7 @@ async def stop_deployment(
     summary="List Deployments",
     description="List all deployments with optional filtering"
 )
+@require_permission("deployments", "read")
 async def list_deployments(
     tool_id: Optional[UUID] = None,
     status_filter: Optional[DeploymentStatus] = None,
@@ -190,6 +195,7 @@ async def list_deployments(
     summary="Check Deployment Health",
     description="Perform a health check on a deployment"
 )
+@require_permission("deployments", "read")
 async def check_deployment_health(
     deployment_id: UUID,
     current_user: UserModel = Depends(get_current_user),
