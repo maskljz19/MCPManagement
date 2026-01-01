@@ -374,9 +374,22 @@ async def get_current_user(
             )
         
         # Get user from database
-        user_id = UUID(payload.get("user_id"))
+        user_id = payload.get("user_id")
+        
+        if not user_id:
+            logger.error(
+                "missing_user_id_in_token",
+                context="auth.get_current_user"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token format",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
         db = auth_service.db
-        stmt = select(UserModel).where(UserModel.id == user_id)
+        # id is stored as CHAR(36) string in database, not UUID
+        stmt = select(UserModel).where(UserModel.id == str(user_id))
         result = await db.execute(stmt)
         user = result.scalar_one_or_none()
         
