@@ -58,8 +58,7 @@ RUN chmod +x /app/scripts/*.sh
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/logs /app/celery && \
-    chown -R celeryuser:celeryuser /app && \
-    chmod 755 /tmp
+    chown -R celeryuser:celeryuser /app
 
 # Switch to non-root user
 USER celeryuser

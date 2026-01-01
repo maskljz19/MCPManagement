@@ -225,11 +225,9 @@ services:
   beat:
     build:
       context: .
-      dockerfile: Dockerfile.worker
-      target: worker
+      dockerfile: Dockerfile.beat
     container_name: mcp-beat
     command: ["bash", "/app/scripts/start-beat.sh"]
-    user: "celeryuser"
     environment:
       # Application
       APP_NAME: ${APP_NAME}

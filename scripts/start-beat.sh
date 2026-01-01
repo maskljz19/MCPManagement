@@ -9,7 +9,7 @@ echo "Starting Celery Beat..."
 
 # Remove any existing beat schedule file to avoid conflicts
 rm -f /app/celerybeat-schedule
-rm -f /tmp/celerybeat.pid
+rm -f /app/celerybeat.pid
 
 # Wait for dependencies
 echo "Waiting for RabbitMQ..."
@@ -24,12 +24,9 @@ while ! nc -z $REDIS_HOST $REDIS_PORT; do
 done
 echo "Redis is ready!"
 
-# Create a simple health check endpoint by touching a file
-touch /tmp/beat-healthy
-
 # Start Celery Beat
 echo "Starting Celery Beat scheduler..."
 exec celery -A app.core.celery_app beat \
     --loglevel=info \
-    --pidfile=/tmp/celerybeat.pid \
+    --pidfile=/app/celerybeat.pid \
     --schedule=/app/celerybeat-schedule
