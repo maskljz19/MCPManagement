@@ -42,24 +42,38 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       
       // Actions
-      setAuth: (user, accessToken, refreshToken) =>
+      setAuth: (user, accessToken, refreshToken) => {
+        // Also sync to localStorage for axios interceptor
+        localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+        
         set({
           user,
           accessToken,
           refreshToken,
           isAuthenticated: true,
-        }),
+        });
+      },
       
-      setAccessToken: (accessToken) =>
-        set({ accessToken }),
+      setAccessToken: (accessToken) => {
+        // Also sync to localStorage
+        localStorage.setItem('access_token', accessToken);
+        
+        set({ accessToken });
+      },
       
-      clearAuth: () =>
+      clearAuth: () => {
+        // Also clear from localStorage
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        
         set({
           user: null,
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
-        }),
+        });
+      },
       
       updateUser: (user) =>
         set({ user }),
@@ -72,6 +86,15 @@ export const useAuthStore = create<AuthState>()(
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
+      // Sync localStorage when hydrating from storage
+      onRehydrateStorage: () => (state) => {
+        if (state?.accessToken) {
+          localStorage.setItem('access_token', state.accessToken);
+        }
+        if (state?.refreshToken) {
+          localStorage.setItem('refresh_token', state.refreshToken);
+        }
+      },
     }
   )
 );

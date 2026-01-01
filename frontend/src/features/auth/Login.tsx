@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -35,6 +35,12 @@ export default function Login() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Debug: Log when component mounts
+  useEffect(() => {
+    console.log('Login component mounted');
+    console.log('Current localStorage access_token:', localStorage.getItem('access_token'));
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -47,16 +53,28 @@ export default function Login() {
     setIsLoading(true);
 
     try {
+      console.log('🔐 Starting login process...');
+      
       // Login and get user data
       const user = await authService.login(data);
+      console.log('✓ Login successful, user:', user);
       
       // Get tokens from authService
       const accessToken = authService.getAccessToken();
       const refreshToken = authService.getRefreshToken();
 
+      console.log('🔑 Tokens retrieved:');
+      console.log('  access_token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'NULL');
+      console.log('  refresh_token:', refreshToken ? `${refreshToken.substring(0, 20)}...` : 'NULL');
+
       if (accessToken && refreshToken) {
-        // Update auth store
+        // Update auth store (this will also sync to localStorage)
         setAuth(user, accessToken, refreshToken);
+        
+        // Verify tokens are in localStorage
+        console.log('✓ Auth store updated');
+        console.log('  localStorage access_token:', localStorage.getItem('access_token')?.substring(0, 20) + '...');
+        console.log('  localStorage refresh_token:', localStorage.getItem('refresh_token')?.substring(0, 20) + '...');
 
         // Show success message
         toast({
@@ -65,11 +83,14 @@ export default function Login() {
         });
 
         // Navigate to dashboard
+        console.log('🚀 Navigating to dashboard...');
         navigate('/dashboard', { replace: true });
       } else {
         throw new Error('未能获取认证令牌');
       }
     } catch (error: any) {
+      console.error('❌ Login failed:', error);
+      
       // Display error message
       const errorMessage = error.response?.data?.detail || error.message || '登录失败，请检查您的凭据';
       

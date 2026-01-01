@@ -1,13 +1,15 @@
 """FastAPI Application Entry Point"""
 
 from fastapi import FastAPI, Request, Depends, HTTPException, status
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, FileResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from pathlib import Path
 
 from app.api.v1 import health, tasks, auth, mcps, knowledge, analyze, github, deployments, websocket
 from app.core.database import get_db
@@ -104,7 +106,7 @@ app.add_middleware(LoggingMiddleware)
 app.add_middleware(ErrorHandlingMiddleware)
 
 # Include routers
-app.include_router(health.router)
+app.include_router(health.router, prefix="/api/v1")  # 添加prefix
 app.include_router(tasks.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(mcps.router, prefix="/api/v1")
@@ -112,7 +114,7 @@ app.include_router(knowledge.router, prefix="/api/v1")
 app.include_router(analyze.router, prefix="/api/v1")
 app.include_router(github.router, prefix="/api/v1")
 app.include_router(deployments.router, prefix="/api/v1")
-app.include_router(websocket.router)  # WebSocket and SSE endpoints
+app.include_router(websocket.router, prefix="/api/v1")  # 添加prefix
 
 
 # Dynamic MCP service routing - catch-all route
@@ -179,6 +181,41 @@ async def route_mcp_request(
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
-    return {"message": "MCP Platform API", "version": "1.0.0"}
+    """Root endpoint - serve frontend index.html"""
+    frontend_path = Path(__file__).parent.parent / "frontend" / "dist"
+    index_file = frontend_path / "index.html"
+    
+    if index_file.exists():
+        return FileResponse(index_file)
+    else:
+        return {"message": "MCP Platform API", "version": "1.0.0"}
+
+
+# Mount static files for frontend (must be after API routes)
+frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
+if frontend_dist.exists():
+    # Mount static assets (js, css, images, etc.)
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+    
+    # Catch-all route for SPA - must be last
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """
+        Serve SPA for all non-API routes.
+        This handles client-side routing for React Router.
+        """
+        # Don't intercept API routes
+        if full_path.startswith("api/") or full_path.startswith("mcp/"):
+            raise HTTPException(status_code=404, detail="Not found")
+        
+        # Serve index.html for all other routes
+        index_file = frontend_dist / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+        else:
+            raise HTTPException(status_code=404, detail="Frontend not found")
+    
+    logger.info("frontend_static_files_mounted", path=str(frontend_dist))
+else:
+    logger.warning("frontend_dist_not_found", expected_path=str(frontend_dist))
 
