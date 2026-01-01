@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libmariadb-dev \
     curl \
     netcat-openbsd \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Stage 2: Dependencies installation
@@ -57,7 +58,8 @@ RUN chmod +x /app/scripts/*.sh
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/logs /app/celery && \
-    chown -R celeryuser:celeryuser /app
+    chown -R celeryuser:celeryuser /app && \
+    chmod 755 /tmp
 
 # Switch to non-root user
 USER celeryuser

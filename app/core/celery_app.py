@@ -53,13 +53,14 @@ def make_celery() -> Celery:
                 "visibility_timeout": 3600,
             },
 
-            # Beat schedule configuration
+            # Beat schedule configuration - start with empty schedule
             beat_schedule={
-                # Example scheduled task - adjust as needed
-                'health-check-task': {
-                    'task': 'app.tasks.ai_tasks.health_check',
-                    'schedule': 60.0,  # Run every 60 seconds
-                },
+                # Add scheduled tasks here as needed
+                # Example:
+                # 'periodic-cleanup': {
+                #     'task': 'app.tasks.maintenance.cleanup_old_data',
+                #     'schedule': crontab(hour=2, minute=0),  # Run daily at 2 AM
+                # },
             },
 
             # Task routing

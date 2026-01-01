@@ -24,6 +24,9 @@ while ! nc -z $REDIS_HOST $REDIS_PORT; do
 done
 echo "Redis is ready!"
 
+# Create a simple health check endpoint by touching a file
+touch /tmp/beat-healthy
+
 # Start Celery Beat
 echo "Starting Celery Beat scheduler..."
 exec celery -A app.core.celery_app beat \
