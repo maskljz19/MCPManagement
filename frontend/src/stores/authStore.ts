@@ -43,7 +43,9 @@ export const useAuthStore = create<AuthState>()(
       
       // Actions
       setAuth: (user, accessToken, refreshToken) => {
-        // Also sync to localStorage for axios interceptor
+        console.log('🔐 setAuth called:', { username: user.username, hasToken: !!accessToken });
+        
+        // Sync to localStorage for axios interceptor
         localStorage.setItem('access_token', accessToken);
         localStorage.setItem('refresh_token', refreshToken);
         
@@ -56,16 +58,21 @@ export const useAuthStore = create<AuthState>()(
       },
       
       setAccessToken: (accessToken) => {
-        // Also sync to localStorage
+        console.log('🔑 setAccessToken called');
+        
+        // Sync to localStorage
         localStorage.setItem('access_token', accessToken);
         
         set({ accessToken });
       },
       
       clearAuth: () => {
-        // Also clear from localStorage
+        console.log('🚪 clearAuth called');
+        
+        // Clear from localStorage
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        localStorage.removeItem('current_user');
         
         set({
           user: null,
@@ -87,13 +94,35 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
       }),
       // Sync localStorage when hydrating from storage
-      onRehydrateStorage: () => (state) => {
-        if (state?.accessToken) {
-          localStorage.setItem('access_token', state.accessToken);
-        }
-        if (state?.refreshToken) {
-          localStorage.setItem('refresh_token', state.refreshToken);
-        }
+      onRehydrateStorage: () => {
+        console.log('💧 Starting rehydration...');
+        return (state, error) => {
+          if (error) {
+            console.error('❌ Rehydration error:', error);
+            return;
+          }
+          
+          if (state) {
+            console.log('✅ Rehydration complete:', {
+              isAuthenticated: state.isAuthenticated,
+              hasUser: !!state.user,
+              hasAccessToken: !!state.accessToken,
+              hasRefreshToken: !!state.refreshToken,
+            });
+            
+            // Sync to localStorage
+            if (state.accessToken) {
+              localStorage.setItem('access_token', state.accessToken);
+              console.log('  ✓ Restored access_token to localStorage');
+            }
+            if (state.refreshToken) {
+              localStorage.setItem('refresh_token', state.refreshToken);
+              console.log('  ✓ Restored refresh_token to localStorage');
+            }
+          } else {
+            console.log('⚠️ No state to rehydrate');
+          }
+        };
       },
     }
   )

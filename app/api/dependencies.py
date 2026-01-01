@@ -33,8 +33,20 @@ def require_permission(resource: str, action: str):
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            # Extract current_user from kwargs (it should be injected by FastAPI)
+            # Try to get current_user from kwargs first
             current_user = kwargs.get('current_user')
+            
+            # If not in kwargs, try to find it in args by inspecting function signature
+            if current_user is None:
+                import inspect
+                sig = inspect.signature(func)
+                param_names = list(sig.parameters.keys())
+                
+                # Find the index of current_user parameter
+                if 'current_user' in param_names:
+                    idx = param_names.index('current_user')
+                    if idx < len(args):
+                        current_user = args[idx]
             
             if current_user is None:
                 raise HTTPException(

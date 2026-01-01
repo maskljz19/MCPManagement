@@ -106,7 +106,10 @@ app.add_middleware(LoggingMiddleware)
 app.add_middleware(ErrorHandlingMiddleware)
 
 # Include routers
-app.include_router(health.router, prefix="/api/v1")  # 添加prefix
+# Health router is included twice: once with prefix for API consistency,
+# and once without prefix for Docker healthcheck compatibility
+app.include_router(health.router, prefix="/api/v1")
+app.include_router(health.router)  # No prefix for /health/simple
 app.include_router(tasks.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(mcps.router, prefix="/api/v1")
@@ -114,7 +117,7 @@ app.include_router(knowledge.router, prefix="/api/v1")
 app.include_router(analyze.router, prefix="/api/v1")
 app.include_router(github.router, prefix="/api/v1")
 app.include_router(deployments.router, prefix="/api/v1")
-app.include_router(websocket.router, prefix="/api/v1")  # 添加prefix
+app.include_router(websocket.router, prefix="/api/v1")
 
 
 # Dynamic MCP service routing - catch-all route

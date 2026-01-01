@@ -50,8 +50,18 @@ axiosInstance.interceptors.request.use(
       }
     }
     
+    // Debug log
+    if (import.meta.env.DEV) {
+      console.log(`🌐 ${config.method?.toUpperCase()} ${config.url}`, {
+        hasToken: !!token,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
+      });
+    }
+    
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else if (!token && import.meta.env.DEV) {
+      console.warn('⚠️ No token available for request');
     }
     
     return config;
@@ -103,20 +113,29 @@ axiosInstance.interceptors.response.use(
 
       if (!refreshToken) {
         // No refresh token available, clear auth and reject
+        console.warn('⚠️ No refresh token available, clearing auth');
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('auth-storage');
         isRefreshing = false;
+        
+        // Redirect to login if in browser
+        if (typeof window !== 'undefined') {
+          window.location.href = '/auth/login';
+        }
+        
         return Promise.reject(error);
       }
 
       try {
         // Attempt to refresh the token
+        console.log('🔄 Attempting to refresh token...');
         const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
           refresh_token: refreshToken,
         });
 
         const { access_token, refresh_token: newRefreshToken } = response.data;
+        console.log('✅ Token refresh successful');
 
         // Store new tokens
         localStorage.setItem('access_token', access_token);
@@ -136,10 +155,17 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         // Refresh failed, clear tokens
+        console.error('❌ Token refresh failed:', refreshError);
         processQueue(refreshError as Error, null);
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('auth-storage');
+        
+        // Redirect to login if in browser
+        if (typeof window !== 'undefined') {
+          window.location.href = '/auth/login';
+        }
+        
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
