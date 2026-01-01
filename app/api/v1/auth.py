@@ -44,6 +44,7 @@ async def register(
     
     Creates a new user account with the provided credentials.
     Password is hashed using bcrypt before storage.
+    Includes comprehensive error handling for role validation.
     
     Args:
         request: FastAPI request object (for rate limiting)
@@ -54,42 +55,104 @@ async def register(
         Created user object (without password)
         
     Raises:
-        HTTPException 400: If username or email already exists
+        HTTPException 400: If username/email already exists or role validation fails
+        HTTPException 422: If input validation fails
     """
-    # Check if username already exists
-    from sqlalchemy import select
-    stmt = select(UserModel).where(UserModel.username == user_data.username)
-    result = await db.execute(stmt)
-    if result.scalar_one_or_none() is not None:
+    from app.core.exceptions import RoleValidationError
+    from app.core.logging_config import get_logger
+    
+    logger = get_logger(__name__)
+    
+    try:
+        # Check if username already exists
+        from sqlalchemy import select
+        stmt = select(UserModel).where(UserModel.username == user_data.username)
+        result = await db.execute(stmt)
+        if result.scalar_one_or_none() is not None:
+            logger.warning(
+                "registration_failed_username_exists",
+                username=user_data.username,
+                context="auth.register"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already registered"
+            )
+        
+        # Check if email already exists
+        stmt = select(UserModel).where(UserModel.email == user_data.email)
+        result = await db.execute(stmt)
+        if result.scalar_one_or_none() is not None:
+            logger.warning(
+                "registration_failed_email_exists",
+                email=user_data.email,
+                context="auth.register"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        
+        # Create new user
+        user = UserModel(
+            id=str(uuid4()),  # Convert UUID to string for SQLite compatibility
+            username=user_data.username,
+            email=user_data.email,
+            password_hash=hash_password(user_data.password),
+            role=user_data.role,
+            is_active=True
+        )
+        
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        
+        logger.info(
+            "user_registered_successfully",
+            user_id=str(user.id),
+            username=user.username,
+            email=user.email,
+            role=user.role.value,
+            context="auth.register"
+        )
+        
+        return user
+        
+    except RoleValidationError as e:
+        # Handle role validation errors with detailed response
+        logger.error(
+            "registration_failed_role_validation",
+            username=user_data.username,
+            email=user_data.email,
+            invalid_role=e.invalid_role,
+            valid_roles=e.valid_roles,
+            context="auth.register",
+            error_details=e.details,
+            exc_info=True
+        )
+        
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
+            detail=e.get_api_response()
         )
     
-    # Check if email already exists
-    stmt = select(UserModel).where(UserModel.email == user_data.email)
-    result = await db.execute(stmt)
-    if result.scalar_one_or_none() is not None:
+    except Exception as e:
+        # Handle unexpected errors
+        logger.error(
+            "registration_failed_unexpected_error",
+            username=user_data.username,
+            email=user_data.email,
+            error_type=type(e).__name__,
+            error_message=str(e),
+            context="auth.register",
+            exc_info=True
+        )
+        
+        # Don't expose internal errors to the client
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during registration"
         )
-    
-    # Create new user
-    user = UserModel(
-        id=str(uuid4()),  # Convert UUID to string for SQLite compatibility
-        username=user_data.username,
-        email=user_data.email,
-        password_hash=hash_password(user_data.password),
-        role=user_data.role,
-        is_active=True
-    )
-    
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    
-    return user
 
 
 @router.post("/login", response_model=Token)
@@ -103,6 +166,7 @@ async def login(
     User login with JWT generation.
     
     Authenticates user with username/email and password.
+    Includes role validation and normalization for backward compatibility.
     Returns access token and refresh token on success.
     
     Args:
@@ -115,29 +179,83 @@ async def login(
         
     Raises:
         HTTPException 401: If credentials are invalid
+        HTTPException 500: If token creation fails
     """
-    # Authenticate user
-    user = await auth_service.authenticate_user(
-        username=credentials.username,
-        password=credentials.password
-    )
+    from app.core.exceptions import RoleValidationError, AuthenticationError, TokenValidationError
+    from app.core.logging_config import get_logger
     
-    if user is None:
+    logger = get_logger(__name__)
+    
+    try:
+        # Authenticate user with role validation and normalization
+        user = await auth_service.authenticate_with_role_validation(
+            username=credentials.username,
+            password=credentials.password
+        )
+        
+        if user is None:
+            logger.warning(
+                "login_failed_invalid_credentials",
+                username=credentials.username,
+                context="auth.login"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        # Create tokens with normalized role
+        access_token, refresh_token, expires_in = await auth_service.create_tokens(user)
+        
+        logger.info(
+            "login_successful",
+            user_id=str(user.id),
+            username=user.username,
+            role=user.role.value,
+            context="auth.login"
+        )
+        
+        return Token(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=expires_in
+        )
+        
+    except (RoleValidationError, AuthenticationError, TokenValidationError) as e:
+        # Handle authentication-related errors
+        logger.error(
+            "login_failed_auth_error",
+            username=credentials.username,
+            error_type=type(e).__name__,
+            error_message=str(e),
+            context="auth.login",
+            exc_info=True
+        )
+        
+        # For security, don't expose detailed error information
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Authentication failed",
             headers={"WWW-Authenticate": "Bearer"}
         )
     
-    # Create tokens
-    access_token, refresh_token, expires_in = await auth_service.create_tokens(user)
-    
-    return Token(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=expires_in
-    )
+    except Exception as e:
+        # Handle unexpected errors
+        logger.error(
+            "login_failed_unexpected_error",
+            username=credentials.username,
+            error_type=type(e).__name__,
+            error_message=str(e),
+            context="auth.login",
+            exc_info=True
+        )
+        
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during login"
+        )
 
 
 @router.post("/refresh", response_model=Token)
@@ -210,41 +328,126 @@ async def get_current_user(
     """
     Dependency to get current authenticated user from JWT token.
     
+    Includes role validation and normalization for backward compatibility.
+    Provides comprehensive error handling and logging.
+    
     Args:
         credentials: HTTP Bearer token credentials
         auth_service: Authentication service
         
     Returns:
-        Current authenticated user
+        Current authenticated user with normalized role
         
     Raises:
         HTTPException 401: If token is invalid or expired
     """
-    token = credentials.credentials
-    payload = await auth_service.verify_access_token(token)
+    from app.core.exceptions import RoleValidationError, TokenValidationError, BackwardCompatibilityError
+    from app.core.logging_config import get_logger
     
-    if payload is None:
+    logger = get_logger(__name__)
+    
+    try:
+        token = credentials.credentials
+        payload = await auth_service.verify_access_token(token)
+        
+        if payload is None:
+            logger.warning(
+                "token_verification_failed",
+                context="auth.get_current_user"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired token",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        # Get user from database
+        user_id = UUID(payload.get("user_id"))
+        db = auth_service.db
+        stmt = select(UserModel).where(UserModel.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+        
+        if user is None or not user.is_active:
+            logger.warning(
+                "user_not_found_or_inactive",
+                user_id=str(user_id),
+                context="auth.get_current_user"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        # Validate and normalize user role for consistency
+        user = await auth_service.validate_and_normalize_user_role(user)
+        
+        # Validate role consistency between token and database for security
+        # This ensures backward compatibility while maintaining security
+        from app.core.security import extract_role_from_token
+        token_role = extract_role_from_token(payload)
+        
+        if token_role is not None and token_role != user.role:
+            # Log potential security issue but don't fail authentication
+            # The database is the source of truth for current user roles
+            compatibility_error = BackwardCompatibilityError(
+                message=f"Role mismatch for user {user.id}: token={token_role.value}, db={user.role.value}",
+                compatibility_issue="token_role_mismatch",
+                user_id=str(user.id),
+                details={
+                    "token_role": token_role.value,
+                    "database_role": user.role.value
+                }
+            )
+            
+            logger.warning(
+                "token_role_mismatch_detected",
+                **compatibility_error.to_dict(),
+                context="auth.get_current_user"
+            )
+        
+        logger.debug(
+            "user_authenticated_successfully",
+            user_id=str(user.id),
+            username=user.username,
+            role=user.role.value,
+            context="auth.get_current_user"
+        )
+        
+        return user
+        
+    except (RoleValidationError, TokenValidationError) as e:
+        # Handle authentication-related errors
+        logger.error(
+            "authentication_failed_validation_error",
+            error_type=type(e).__name__,
+            error_message=str(e),
+            context="auth.get_current_user",
+            exc_info=True
+        )
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+            detail="Authentication failed",
             headers={"WWW-Authenticate": "Bearer"}
         )
     
-    # Get user from database
-    user_id = UUID(payload.get("user_id"))
-    db = auth_service.db
-    stmt = select(UserModel).where(UserModel.id == user_id)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-    
-    if user is None or not user.is_active:
+    except Exception as e:
+        # Handle unexpected errors
+        logger.error(
+            "authentication_failed_unexpected_error",
+            error_type=type(e).__name__,
+            error_message=str(e),
+            context="auth.get_current_user",
+            exc_info=True
+        )
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or inactive",
+            detail="Authentication failed",
             headers={"WWW-Authenticate": "Bearer"}
         )
-    
-    return user
 
 
 @router.post("/api-keys", response_model=APIKeyResponse, status_code=status.HTTP_201_CREATED)

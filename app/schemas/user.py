@@ -31,6 +31,8 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Schema for creating a new user"""
+    model_config = ConfigDict(use_enum_values=True)
+    
     password: str = Field(
         ...,
         min_length=8,
@@ -41,6 +43,34 @@ class UserCreate(UserBase):
         default=UserRole.VIEWER,
         description="User role for RBAC"
     )
+    
+    @field_validator('role', mode='before')
+    @classmethod
+    def normalize_role(cls, v):
+        """
+        Normalize role value before validation.
+        
+        Handles case-insensitive role normalization and provides
+        helpful error messages for invalid roles.
+        
+        **Requirements: 5.1, 5.2**
+        """
+        from app.core.exceptions import RoleValidationError
+        from pydantic import ValidationError
+        
+        if v is None:
+            return UserRole.VIEWER
+        
+        if isinstance(v, str):
+            try:
+                return UserRole.normalize(v)
+            except RoleValidationError as e:
+                # Convert to Pydantic ValidationError with helpful message
+                raise ValueError(
+                    f"Invalid role: '{e.invalid_role}'. Valid options: {e.valid_roles}"
+                ) from e
+        
+        return v
     
     @field_validator('password')
     @classmethod
@@ -59,11 +89,41 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     """Schema for updating an existing user"""
+    model_config = ConfigDict(use_enum_values=True)
+    
     username: Optional[str] = Field(None, min_length=3, max_length=100)
     email: Optional[EmailStr] = None
     password: Optional[str] = Field(None, min_length=8, max_length=100)
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
+    
+    @field_validator('role', mode='before')
+    @classmethod
+    def normalize_role(cls, v):
+        """
+        Normalize role value before validation.
+        
+        Handles case-insensitive role normalization and provides
+        helpful error messages for invalid roles.
+        
+        **Requirements: 5.1, 5.2**
+        """
+        from app.core.exceptions import RoleValidationError
+        from pydantic import ValidationError
+        
+        if v is None:
+            return None
+        
+        if isinstance(v, str):
+            try:
+                return UserRole.normalize(v)
+            except RoleValidationError as e:
+                # Convert to Pydantic ValidationError with helpful message
+                raise ValueError(
+                    f"Invalid role: '{e.invalid_role}'. Valid options: {e.valid_roles}"
+                ) from e
+        
+        return v
     
     @field_validator('username')
     @classmethod
@@ -91,7 +151,13 @@ class UserUpdate(BaseModel):
 
 class User(UserBase):
     """Schema for user response (excludes password)"""
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        use_enum_values=True,  # Serialize enums as their string values (lowercase)
+        json_encoders={
+            UserRole: lambda v: v.value  # Ensure lowercase serialization
+        }
+    )
     
     id: UUID
     role: UserRole

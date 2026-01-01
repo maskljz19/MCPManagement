@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"  # json or text
+    LOG_HEALTH_CHECKS: bool = False  # Set to True to log health check requests
     
     @field_validator('MYSQL_PORT', 'REDIS_PORT', 'RABBITMQ_PORT')
     @classmethod

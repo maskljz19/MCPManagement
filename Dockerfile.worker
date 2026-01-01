@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     libmariadb-dev \
     curl \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Stage 2: Dependencies installation
@@ -49,6 +50,10 @@ COPY --from=dependencies /usr/local/bin /usr/local/bin
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini .
+COPY scripts ./scripts
+
+# Make scripts executable
+RUN chmod +x /app/scripts/*.sh
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/logs /app/celery && \

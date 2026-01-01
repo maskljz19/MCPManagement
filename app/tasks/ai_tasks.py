@@ -20,6 +20,22 @@ def get_ai_analyzer() -> AIAnalyzer:
     )
 
 
+@celery_app.task(name="app.tasks.ai_tasks.health_check")
+def health_check() -> Dict[str, str]:
+    """
+    Simple health check task for Celery Beat monitoring.
+    
+    Returns:
+        Status message with timestamp
+    """
+    from datetime import datetime
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "celery_beat"
+    }
+
+
 @celery_app.task(
     bind=True,
     name="app.tasks.ai_tasks.analyze_feasibility",

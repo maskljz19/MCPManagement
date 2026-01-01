@@ -20,26 +20,35 @@ from app.api.middleware import (
     limiter,
     validate_cors_origin
 )
+from app.api.exception_handlers import register_exception_handlers
 from app.core.config import settings
 from app.core.database import (
     init_mysql, close_mysql,
     init_mongodb, close_mongodb,
     init_redis, close_redis
 )
+from app.core.logging_config import get_logger
+
+
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager for startup and shutdown events"""
     # Startup: Initialize database connections
+    logger.info("application_startup_initiated")
     await init_mysql()
     await init_mongodb()
     await init_redis()
+    logger.info("application_startup_completed")
     yield
     # Shutdown: Close database connections
+    logger.info("application_shutdown_initiated")
     await close_mysql()
     await close_mongodb()
     await close_redis()
+    logger.info("application_shutdown_completed")
 
 
 app = FastAPI(
@@ -59,33 +68,16 @@ app.state.limiter = limiter
 # Add rate limit exceeded handler
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Add validation error handler
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """
-    Handle validation errors with detailed field-level information.
-    
-    **Requirements: 10.3**
-    """
-    errors = []
-    for error in exc.errors():
-        errors.append({
-            "field": ".".join(str(loc) for loc in error["loc"]),
-            "message": error["msg"],
-            "type": error["type"]
-        })
-    
-    return JSONResponse(
-        status_code=422,
-        content={
-            "error": {
-                "type": "ValidationError",
-                "message": "Request validation failed",
-                "details": errors,
-                "request_id": getattr(request.state, "request_id", "unknown")
-            }
-        }
-    )
+# Register comprehensive exception handlers for authentication enum fix
+# This includes RoleValidationError, AuthenticationError, TokenValidationError, etc.
+register_exception_handlers(app)
+
+logger.info(
+    "application_initialized",
+    title=app.title,
+    version=app.version,
+    environment=settings.ENVIRONMENT
+)
 
 # Add middleware in correct order (LIFO - last added is executed first)
 # Order: Error Handler -> Logging -> Request ID -> Usage Stats -> CORS

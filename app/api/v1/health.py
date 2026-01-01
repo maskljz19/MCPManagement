@@ -4,9 +4,18 @@ from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse, Response
 from typing import Dict, Any
 import asyncio
+import time
 from app.core.monitoring import get_metrics, get_metrics_content_type
+from app.core.config import settings
 
 router = APIRouter(tags=["health"])
+
+# Cache health check results to reduce database load
+_health_cache = {
+    "last_check": 0,
+    "cache_duration": 30,  # Cache for 30 seconds
+    "cached_result": None
+}
 
 
 async def check_mysql() -> bool:
@@ -43,17 +52,8 @@ async def check_rabbitmq() -> bool:
         return False
 
 
-@router.get("/health", status_code=status.HTTP_200_OK)
-async def health_check() -> JSONResponse:
-    """
-    Health check endpoint that verifies all service dependencies.
-    
-    Returns:
-        200 OK if all services are healthy
-        503 Service Unavailable if any service is unhealthy
-    
-    **Requirements: 12.3**
-    """
+async def _perform_health_checks() -> Dict[str, Any]:
+    """Perform actual health checks"""
     # Check all services
     checks = {
         "mysql": await check_mysql(),
@@ -65,12 +65,40 @@ async def health_check() -> JSONResponse:
     # Determine overall health
     all_healthy = all(checks.values())
     
-    response_data: Dict[str, Any] = {
+    return {
         "status": "healthy" if all_healthy else "unhealthy",
-        "services": checks
+        "services": checks,
+        "timestamp": int(time.time())
     }
+
+
+@router.get("/health", status_code=status.HTTP_200_OK)
+async def health_check() -> JSONResponse:
+    """
+    Health check endpoint that verifies all service dependencies.
     
-    if all_healthy:
+    Uses caching to reduce database load from frequent health checks.
+    
+    Returns:
+        200 OK if all services are healthy
+        503 Service Unavailable if any service is unhealthy
+    
+    **Requirements: 12.3**
+    """
+    current_time = time.time()
+    
+    # Check if we have a cached result that's still valid
+    if (_health_cache["cached_result"] is not None and 
+        current_time - _health_cache["last_check"] < _health_cache["cache_duration"]):
+        response_data = _health_cache["cached_result"]
+    else:
+        # Perform health checks and cache the result
+        response_data = await _perform_health_checks()
+        _health_cache["cached_result"] = response_data
+        _health_cache["last_check"] = current_time
+    
+    # Return appropriate status code
+    if response_data["status"] == "healthy":
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content=response_data
@@ -80,6 +108,26 @@ async def health_check() -> JSONResponse:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content=response_data
         )
+
+
+@router.get("/health/simple", status_code=status.HTTP_200_OK)
+async def simple_health_check() -> JSONResponse:
+    """
+    Simple health check endpoint that just returns OK.
+    
+    Use this for basic liveness checks that don't need dependency validation.
+    This endpoint generates minimal logs and has no database dependencies.
+    
+    Returns:
+        200 OK always
+    """
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "status": "ok",
+            "timestamp": int(time.time())
+        }
+    )
 
 
 @router.get("/metrics")

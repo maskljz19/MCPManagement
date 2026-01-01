@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from app.models.user import UserRole
 
 
@@ -23,6 +23,13 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     """Schema for JWT token payload"""
+    model_config = ConfigDict(
+        use_enum_values=True,  # Serialize enums as their string values (lowercase)
+        json_encoders={
+            UserRole: lambda v: v.value  # Ensure lowercase serialization
+        }
+    )
+    
     sub: UUID = Field(..., description="Subject (user ID)")
     user_id: UUID = Field(..., description="User ID")
     username: str = Field(..., description="Username")

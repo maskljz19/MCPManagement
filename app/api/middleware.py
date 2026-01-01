@@ -77,6 +77,14 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         (re.compile(r'Bearer\s+[A-Za-z0-9\-._~+/]+=*', re.IGNORECASE), 'Bearer [REDACTED]'),
     ]
     
+    # Paths to exclude from detailed logging (health checks, metrics, etc.)
+    EXCLUDED_PATHS = {
+        "/health",
+        "/metrics",
+        "/favicon.ico",
+        "/robots.txt"
+    }
+    
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request and log details"""
         
@@ -86,19 +94,26 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # Get user ID if authenticated
         user_id = getattr(request.state, "user_id", None)
         
+        # Check if this is a path we should skip detailed logging for
+        skip_detailed_logging = (
+            request.url.path in self.EXCLUDED_PATHS and 
+            not settings.LOG_HEALTH_CHECKS
+        )
+        
         # Record start time
         start_time = time.time()
         
-        # Log request
-        logger.info(
-            "request_started",
-            request_id=request_id,
-            method=request.method,
-            path=request.url.path,
-            query_params=str(request.query_params),
-            user_id=user_id,
-            client_host=request.client.host if request.client else None,
-        )
+        # Log request (skip for health checks unless in debug mode)
+        if not skip_detailed_logging or settings.DEBUG:
+            logger.info(
+                "request_started",
+                request_id=request_id,
+                method=request.method,
+                path=request.url.path,
+                query_params=str(request.query_params),
+                user_id=user_id,
+                client_host=request.client.host if request.client else None,
+            )
         
         # Process request
         try:
@@ -107,16 +122,17 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             # Calculate response time
             response_time = time.time() - start_time
             
-            # Log response
-            logger.info(
-                "request_completed",
-                request_id=request_id,
-                method=request.method,
-                path=request.url.path,
-                status_code=response.status_code,
-                response_time_ms=int(response_time * 1000),
-                user_id=user_id,
-            )
+            # Log response (skip for health checks unless in debug mode or error)
+            if not skip_detailed_logging or settings.DEBUG or response.status_code >= 400:
+                logger.info(
+                    "request_completed",
+                    request_id=request_id,
+                    method=request.method,
+                    path=request.url.path,
+                    status_code=response.status_code,
+                    response_time_ms=int(response_time * 1000),
+                    user_id=user_id,
+                )
             
             return response
             
@@ -124,7 +140,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             # Calculate response time
             response_time = time.time() - start_time
             
-            # Log error with structured context
+            # Always log errors, even for health checks
             logger.error(
                 "request_failed",
                 request_id=request_id,

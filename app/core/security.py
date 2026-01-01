@@ -91,12 +91,20 @@ def create_access_token(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
     
+    # Ensure role is always stored as lowercase string for consistency
+    # This handles both UserRole enum values and any string inputs
+    if isinstance(role, UserRole):
+        role_claim = role.value  # Already lowercase from enum definition
+    else:
+        # Handle case where role might be passed as string (backward compatibility)
+        role_claim = str(role).lower()
+    
     # Create token payload with claims
     to_encode = {
         "sub": str(user_id),  # Subject (standard JWT claim)
         "user_id": str(user_id),
         "username": username,
-        "role": role.value,
+        "role": role_claim,  # Always lowercase for consistency
         "permissions": permissions,
         "exp": expire,  # Expiration time (standard JWT claim)
         "iat": datetime.utcnow(),  # Issued at (standard JWT claim)
@@ -197,6 +205,14 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
     if exp_datetime < datetime.utcnow():
         return None
     
+    # Handle backward compatibility for role claims
+    # Normalize role claim to lowercase for consistency
+    if "role" in payload:
+        role_claim = payload["role"]
+        if isinstance(role_claim, str):
+            # Normalize to lowercase for consistent handling
+            payload["role"] = role_claim.lower()
+    
     return payload
 
 
@@ -236,3 +252,28 @@ def verify_api_key(plain_key: str, hashed_key: str) -> bool:
         True if API key matches, False otherwise
     """
     return hash_api_key(plain_key) == hashed_key
+
+
+def extract_role_from_token(payload: Dict[str, Any]) -> Optional[UserRole]:
+    """
+    Extract and normalize role from JWT token payload.
+    
+    Handles backward compatibility by accepting both uppercase and lowercase
+    role claims from existing tokens.
+    
+    Args:
+        payload: JWT token payload dictionary
+        
+    Returns:
+        UserRole enum if valid role found, None otherwise
+    """
+    role_claim = payload.get("role")
+    if role_claim is None:
+        return None
+    
+    try:
+        # Use UserRole.normalize to handle case-insensitive conversion
+        return UserRole.normalize(role_claim)
+    except ValueError:
+        # Invalid role in token, return None
+        return None

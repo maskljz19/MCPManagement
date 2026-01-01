@@ -53,6 +53,15 @@ def make_celery() -> Celery:
                 "visibility_timeout": 3600,
             },
 
+            # Beat schedule configuration
+            beat_schedule={
+                # Example scheduled task - adjust as needed
+                'health-check-task': {
+                    'task': 'app.tasks.ai_tasks.health_check',
+                    'schedule': 60.0,  # Run every 60 seconds
+                },
+            },
+
             # Task routing
             task_routes={
                 "app.tasks.ai_tasks.*": {"queue": "ai_analysis"},
