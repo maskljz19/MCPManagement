@@ -33,6 +33,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { Deployment } from '@/types';
+import { parseDate } from '@/utils/dateUtils';
 
 export default function DeploymentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -267,11 +268,11 @@ export default function DeploymentDetail() {
             </div>
             <div className="pt-2 border-t space-y-2">
               <div className="text-xs text-muted-foreground">
-                部署时间: {formatDistanceToNow(new Date(deployment.deployed_at), { addSuffix: true, locale: zhCN })}
+                部署时间: {formatDistanceToNow(parseDate(deployment.deployed_at), { addSuffix: true, locale: zhCN })}
               </div>
               {deployment.last_health_check && (
                 <div className="text-xs text-muted-foreground">
-                  最后健康检查: {formatDistanceToNow(new Date(deployment.last_health_check), { addSuffix: true, locale: zhCN })}
+                  最后健康检查: {formatDistanceToNow(parseDate(deployment.last_health_check), { addSuffix: true, locale: zhCN })}
                 </div>
               )}
             </div>

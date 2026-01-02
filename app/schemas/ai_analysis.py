@@ -74,6 +74,13 @@ class ConfigRequirements(BaseModel):
         return v
 
 
+class ImprovementRequest(BaseModel):
+    """Schema for improvement suggestions request"""
+    tool_name: str = Field(..., min_length=1, max_length=255, description="Name of the tool")
+    description: str = Field(..., min_length=1, description="Description of the tool")
+    config: Dict[str, Any] = Field(..., description="Current tool configuration")
+
+
 class AnalysisRequest(BaseModel):
     """Schema for AI analysis request"""
     tool_id: Optional[UUID] = Field(None, description="ID of existing tool to analyze")

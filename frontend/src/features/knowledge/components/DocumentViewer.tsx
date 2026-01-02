@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import apiClient from '@/services/apiClient';
+import { parseDate } from '@/utils/dateUtils';
 
 interface DocumentViewerProps {
   documentId: string | null;
@@ -50,7 +51,7 @@ export default function DocumentViewer({
                   </DialogTitle>
                   <DialogDescription className="mt-2">
                     创建于{' '}
-                    {formatDistanceToNow(new Date(document.created_at), {
+                    {formatDistanceToNow(parseDate(document.created_at), {
                       addSuffix: true,
                       locale: zhCN,
                     })}
@@ -112,12 +113,12 @@ export default function DocumentViewer({
               <div className="flex items-center gap-4 text-xs text-muted-foreground pt-4 border-t">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  <span>创建: {new Date(document.created_at).toLocaleString('zh-CN')}</span>
+                  <span>创建: {parseDate(document.created_at).toLocaleString('zh-CN')}</span>
                 </div>
                 {document.updated_at && document.updated_at !== document.created_at && (
                   <div className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    <span>更新: {new Date(document.updated_at).toLocaleString('zh-CN')}</span>
+                    <span>更新: {parseDate(document.updated_at).toLocaleString('zh-CN')}</span>
                   </div>
                 )}
               </div>

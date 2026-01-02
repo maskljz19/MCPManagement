@@ -86,6 +86,7 @@ class MCPTool(MCPToolBase):
     id: UUID
     author_id: UUID
     status: ToolStatus
+    config: Optional[Dict[str, Any]] = Field(None, description="Latest tool configuration (from MongoDB)")
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None

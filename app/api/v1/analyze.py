@@ -10,6 +10,7 @@ from app.services.task_tracker import TaskTracker
 from app.schemas.ai_analysis import (
     FeasibilityReport,
     Improvement,
+    ImprovementRequest,
     ConfigRequirements
 )
 from app.tasks.ai_tasks import (
@@ -117,9 +118,7 @@ async def analyze_feasibility(
 @router.post("/improvements", response_model=Dict[str, Any])
 @require_permission("analyze", "create")
 async def get_improvements(
-    tool_name: str,
-    description: str,
-    config: Dict[str, Any],
+    request: ImprovementRequest,
     async_mode: bool = False,
     analyzer: AIAnalyzer = Depends(get_ai_analyzer),
     tracker: TaskTracker = Depends(get_task_tracker),
@@ -132,9 +131,7 @@ async def get_improvements(
     improvement recommendations across various categories.
     
     Args:
-        tool_name: Name of the tool
-        description: Tool description
-        config: Current tool configuration
+        request: Improvement request containing tool_name, description, and config
         async_mode: If True, process asynchronously and return task_id
     
     Returns:
@@ -147,17 +144,6 @@ async def get_improvements(
     
     Validates: Requirements 3.2
     """
-    if not tool_name or not tool_name.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Tool name cannot be empty"
-        )
-    
-    if not config:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Configuration cannot be empty"
-        )
     
     # If async mode, queue task and return task_id
     if async_mode:
@@ -171,7 +157,7 @@ async def get_improvements(
         
         # Queue Celery task
         suggest_improvements_task.apply_async(
-            args=[str(task_id), tool_name, description, config],
+            args=[str(task_id), request.tool_name, request.description, request.config],
             task_id=str(task_id)
         )
         
@@ -184,9 +170,9 @@ async def get_improvements(
     # Synchronous mode - analyze immediately
     try:
         improvements = await analyzer.suggest_improvements(
-            tool_name=tool_name,
-            description=description,
-            config=config
+            tool_name=request.tool_name,
+            description=request.description,
+            config=request.config
         )
         return {
             "improvements": [imp.model_dump() for imp in improvements]

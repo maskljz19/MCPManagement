@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RevokeAPIKeyDialog } from './RevokeAPIKeyDialog';
 import type { APIKey } from '@/types';
+import { parseDate } from '@/utils/dateUtils';
 
 interface APIKeyListProps {
   apiKeys: APIKey[];
@@ -83,7 +84,7 @@ export function APIKeyList({ apiKeys, isLoading, error, onRevoke }: APIKeyListPr
   // Check if key is expired
   const isExpired = (expiresAt?: string) => {
     if (!expiresAt) return false;
-    return new Date(expiresAt) < new Date();
+    return parseDate(expiresAt) < new Date();
   };
 
   // Check if key is revoked
@@ -126,14 +127,14 @@ export function APIKeyList({ apiKeys, isLoading, error, onRevoke }: APIKeyListPr
                   <TableCell>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Calendar className="h-3 w-3 mr-1" />
-                      {format(new Date(key.created_at), 'PPP', { locale: zhCN })}
+                      {format(parseDate(key.created_at), 'PPP', { locale: zhCN })}
                     </div>
                   </TableCell>
                   <TableCell>
                     {key.last_used_at ? (
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Clock className="h-3 w-3 mr-1" />
-                        {format(new Date(key.last_used_at), 'PPP', { locale: zhCN })}
+                        {format(parseDate(key.last_used_at), 'PPP', { locale: zhCN })}
                       </div>
                     ) : (
                       <span className="text-sm text-muted-foreground">从未使用</span>
@@ -142,7 +143,7 @@ export function APIKeyList({ apiKeys, isLoading, error, onRevoke }: APIKeyListPr
                   <TableCell>
                     {key.expires_at ? (
                       <div className="flex items-center text-sm text-muted-foreground">
-                        {format(new Date(key.expires_at), 'PPP', { locale: zhCN })}
+                        {format(parseDate(key.expires_at), 'PPP', { locale: zhCN })}
                       </div>
                     ) : (
                       <span className="text-sm text-muted-foreground">永不过期</span>

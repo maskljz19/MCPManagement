@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import Editor from '@monaco-editor/react';
 import { useState } from 'react';
+import { parseDate } from '@/utils/dateUtils';
 import {
   Dialog,
   DialogContent,
@@ -181,7 +182,7 @@ export default function ToolDetail() {
                 创建时间
               </h3>
               <p className="text-muted-foreground">
-                {format(new Date(tool.created_at), 'PPP HH:mm', {
+                {format(parseDate(tool.created_at), 'PPP HH:mm', {
                   locale: zhCN,
                 })}
               </p>
@@ -192,7 +193,7 @@ export default function ToolDetail() {
                 更新时间
               </h3>
               <p className="text-muted-foreground">
-                {format(new Date(tool.updated_at), 'PPP HH:mm', {
+                {format(parseDate(tool.updated_at), 'PPP HH:mm', {
                   locale: zhCN,
                 })}
               </p>

@@ -13,8 +13,38 @@ import { Loader2 } from 'lucide-react';
  * Allows users to analyze the feasibility of an MCP tool configuration
  * Submits configuration for AI analysis and displays results
  */
+const DEFAULT_CONFIG = `{
+  "name": "weather-mcp-server",
+  "version": "1.0.0",
+  "description": "Weather information MCP server",
+  "server": {
+    "command": "node",
+    "args": ["dist/index.js"],
+    "env": {
+      "API_KEY": "your-api-key-here",
+      "PORT": "3000"
+    }
+  },
+  "tools": [
+    {
+      "name": "get_weather",
+      "description": "Get current weather for a location",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "City name or coordinates"
+          }
+        },
+        "required": ["location"]
+      }
+    }
+  ]
+}`;
+
 export function FeasibilityAnalysis() {
-  const [config, setConfig] = useState('{\n  "name": "example-tool",\n  "version": "1.0.0"\n}');
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [taskId, setTaskId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -53,7 +83,7 @@ export function FeasibilityAnalysis() {
 
   const handleReset = () => {
     setTaskId(null);
-    setConfig('{\n  "name": "example-tool",\n  "version": "1.0.0"\n}');
+    setConfig(DEFAULT_CONFIG);
   };
 
   return (
@@ -70,7 +100,7 @@ export function FeasibilityAnalysis() {
               className="font-mono min-h-[300px]"
             />
             <p className="text-sm text-muted-foreground">
-              输入要分析的 MCP 工具配置（JSON 格式）
+              输入要分析的 MCP 工具配置（JSON 格式）。示例包含服务器配置（command、args、env）和工具定义（tools）。
             </p>
           </div>
 

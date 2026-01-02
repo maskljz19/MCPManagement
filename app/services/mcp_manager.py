@@ -144,8 +144,9 @@ class MCPManager:
             change_type="create"
         )
         
-        # Convert to Pydantic model
+        # Convert to Pydantic model and include config
         tool = MCPTool.model_validate(tool_model)
+        tool.config = tool_data.config
         
         # Cache the tool using CacheService
         await self.cache_service.set_tool(tool.id, tool.model_dump())
@@ -180,6 +181,9 @@ class MCPManager:
         
         # Convert to Pydantic model
         tool = MCPTool.model_validate(tool_model)
+        
+        # Get latest config from MongoDB
+        tool.config = await self._get_latest_config(tool_id)
         
         # Cache the tool using CacheService
         await self.cache_service.set_tool(tool_id, tool.model_dump())
@@ -254,6 +258,9 @@ class MCPManager:
         
         # Convert to Pydantic model
         tool = MCPTool.model_validate(tool_model)
+        
+        # Get latest config from MongoDB
+        tool.config = await self._get_latest_config(tool_id)
         
         # Invalidate cache using CacheService
         await self.cache_service.delete_tool(tool_id)
@@ -373,8 +380,13 @@ class MCPManager:
         result = await self.db.execute(stmt)
         tool_models = result.scalars().all()
         
-        # Convert to Pydantic models
-        tools = [MCPTool.model_validate(model) for model in tool_models]
+        # Convert to Pydantic models and fetch configs
+        tools = []
+        for model in tool_models:
+            tool = MCPTool.model_validate(model)
+            # Get latest config from MongoDB
+            tool.config = await self._get_latest_config(UUID(model.id))
+            tools.append(tool)
         
         # Create page object
         page = Page(

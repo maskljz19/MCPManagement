@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { Document } from '@/types';
+import { parseDate } from '@/utils/dateUtils';
 
 interface DocumentListProps {
   documents: Document[];
@@ -61,7 +62,7 @@ export default function DocumentList({
                 </CardTitle>
                 <CardDescription className="mt-1">
                   创建于{' '}
-                  {formatDistanceToNow(new Date(doc.created_at), {
+                  {formatDistanceToNow(parseDate(doc.created_at), {
                     addSuffix: true,
                     locale: zhCN,
                   })}

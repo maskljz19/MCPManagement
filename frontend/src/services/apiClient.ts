@@ -191,10 +191,8 @@ class APIClient {
     /**
      * Get improvement suggestions for a tool
      */
-    getImprovements: async (toolId: string): Promise<TaskResponse> => {
-      const response = await axiosInstance.post<TaskResponse>('/api/v1/analyze/improvements', {
-        tool_id: toolId,
-      });
+    getImprovements: async (data: { tool_name: string; description: string; config: Record<string, any> }): Promise<TaskResponse> => {
+      const response = await axiosInstance.post<TaskResponse>('/api/v1/analyze/improvements', data);
       return response.data;
     },
 
@@ -202,9 +200,7 @@ class APIClient {
      * Generate configuration from requirements
      */
     generateConfig: async (requirements: Record<string, any>): Promise<TaskResponse> => {
-      const response = await axiosInstance.post<TaskResponse>('/api/v1/analyze/generate-config', {
-        requirements,
-      });
+      const response = await axiosInstance.post<TaskResponse>('/api/v1/analyze/generate-config', requirements);
       return response.data;
     },
 

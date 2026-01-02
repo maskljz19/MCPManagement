@@ -38,6 +38,61 @@ const toolFormSchema = z.object({
 
 type ToolFormData = z.infer<typeof toolFormSchema>;
 
+const DEFAULT_TOOL_CONFIG = `{
+  "name": "data-processor",
+  "version": "1.0.0",
+  "description": "Data processing MCP server",
+  "server": {
+    "command": "python",
+    "args": ["-m", "data_processor"],
+    "env": {
+      "MAX_FILE_SIZE": "10MB",
+      "SUPPORTED_FORMATS": "json,csv,xml"
+    }
+  },
+  "tools": [
+    {
+      "name": "validate_data",
+      "description": "Validate data format and structure",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string",
+            "description": "Data to validate"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["json", "csv", "xml"]
+          }
+        },
+        "required": ["data", "format"]
+      }
+    },
+    {
+      "name": "convert_format",
+      "description": "Convert data between formats",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string"
+          },
+          "from_format": {
+            "type": "string",
+            "enum": ["json", "csv", "xml"]
+          },
+          "to_format": {
+            "type": "string",
+            "enum": ["json", "csv", "xml"]
+          }
+        },
+        "required": ["data", "from_format", "to_format"]
+      }
+    }
+  ]
+}`;
+
 export default function ToolForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -45,7 +100,7 @@ export default function ToolForm() {
   const queryClient = useQueryClient();
   const isEditMode = !!id;
 
-  const [configValue, setConfigValue] = useState('{}');
+  const [configValue, setConfigValue] = useState(DEFAULT_TOOL_CONFIG);
   const [configError, setConfigError] = useState<string | null>(null);
 
   // Fetch tool data if in edit mode
@@ -70,7 +125,7 @@ export default function ToolForm() {
       description: '',
       version: '1.0.0',
       status: 'DRAFT',
-      config: '{}',
+      config: DEFAULT_TOOL_CONFIG,
     },
   });
 
@@ -336,7 +391,7 @@ export default function ToolForm() {
           <CardHeader>
             <CardTitle>配置</CardTitle>
             <CardDescription>
-              工具的 JSON 配置，定义工具的行为和参数
+              工具的 JSON 配置，定义 MCP 服务器和工具。包含服务器启动命令、环境变量和工具定义（名称、描述、输入参数）。
             </CardDescription>
           </CardHeader>
           <CardContent>

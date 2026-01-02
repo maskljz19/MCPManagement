@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Package, Rocket, Database, GitBranch, Clock } from 'lucide-react';
 import apiClient from '@/services/apiClient';
+import { parseDate } from '@/utils/dateUtils';
 
 interface Activity {
   id: string;
@@ -75,7 +76,7 @@ export default function ActivityTimeline() {
   }
 
   // Sort by timestamp (most recent first)
-  activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  activities.sort((a, b) => parseDate(b.timestamp).getTime() - parseDate(a.timestamp).getTime());
 
   // Take only the 10 most recent
   const recentActivities = activities.slice(0, 10);
@@ -148,7 +149,7 @@ export default function ActivityTimeline() {
                     <p className="text-sm font-medium">{activity.title}</p>
                     <p className="text-sm text-muted-foreground truncate">{activity.description}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {formatDistanceToNow(new Date(activity.timestamp), {
+                      {formatDistanceToNow(parseDate(activity.timestamp), {
                         addSuffix: true,
                         locale: zhCN,
                       })}

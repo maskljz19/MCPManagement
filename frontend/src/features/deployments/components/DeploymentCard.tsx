@@ -5,6 +5,7 @@ import type { Deployment } from '@/types';
 import { Activity, AlertCircle, CheckCircle, Clock, ExternalLink, TrendingUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { parseDate } from '@/utils/dateUtils';
 
 interface DeploymentCardProps {
   deployment: Deployment;
@@ -134,11 +135,11 @@ export function DeploymentCard({ deployment, onViewDetails, onStop }: Deployment
         {/* Timestamps */}
         <div className="text-xs text-muted-foreground space-y-1">
           <p>
-            部署时间: {formatDistanceToNow(new Date(deployment.deployed_at), { addSuffix: true, locale: zhCN })}
+            部署时间: {formatDistanceToNow(parseDate(deployment.deployed_at), { addSuffix: true, locale: zhCN })}
           </p>
           {deployment.last_health_check && (
             <p>
-              最后健康检查: {formatDistanceToNow(new Date(deployment.last_health_check), { addSuffix: true, locale: zhCN })}
+              最后健康检查: {formatDistanceToNow(parseDate(deployment.last_health_check), { addSuffix: true, locale: zhCN })}
             </p>
           )}
         </div>

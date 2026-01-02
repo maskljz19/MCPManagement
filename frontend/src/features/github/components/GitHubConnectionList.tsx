@@ -9,6 +9,7 @@ import { GitBranch, RefreshCw, Trash2, AlertCircle, CheckCircle2, Clock } from '
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { GitHubConnection } from '@/types';
+import { parseDate } from '@/utils/dateUtils';
 
 interface GitHubConnectionListProps {
   onSync?: (connectionId: string) => void;
@@ -139,7 +140,7 @@ export function GitHubConnectionList({ onSync, onDisconnect }: GitHubConnectionL
                 {connection.last_sync ? (
                   <>
                     最后同步:{' '}
-                    {formatDistanceToNow(new Date(connection.last_sync), {
+                    {formatDistanceToNow(parseDate(connection.last_sync), {
                       addSuffix: true,
                       locale: zhCN,
                     })}

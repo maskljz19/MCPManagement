@@ -24,9 +24,16 @@ export function ImprovementSuggestions() {
     queryFn: () => apiClient.tools.list({ limit: 100 }),
   });
 
+  // Fetch selected tool details
+  const { data: selectedTool } = useQuery({
+    queryKey: ['tool', selectedToolId],
+    queryFn: () => apiClient.tools.get(selectedToolId),
+    enabled: !!selectedToolId,
+  });
+
   const improvementMutation = useMutation({
-    mutationFn: async (toolId: string) => {
-      return apiClient.analysis.getImprovements(toolId);
+    mutationFn: async (data: { tool_name: string; description: string; config: Record<string, any> }) => {
+      return apiClient.analysis.getImprovements(data);
     },
     onSuccess: (data) => {
       setTaskId(data.task_id);
@@ -53,7 +60,21 @@ export function ImprovementSuggestions() {
       });
       return;
     }
-    improvementMutation.mutate(selectedToolId);
+
+    if (!selectedTool) {
+      toast({
+        title: '工具数据加载中',
+        description: '请稍候，正在加载工具详情',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    improvementMutation.mutate({
+      tool_name: selectedTool.name,
+      description: selectedTool.description,
+      config: selectedTool.config,
+    });
   };
 
   const handleReset = () => {
@@ -96,7 +117,7 @@ export function ImprovementSuggestions() {
 
           <Button
             onClick={handleSubmit}
-            disabled={improvementMutation.isPending || !selectedToolId || isLoadingTools}
+            disabled={improvementMutation.isPending || !selectedToolId || isLoadingTools || !selectedTool}
             className="w-full"
           >
             {improvementMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -9,13 +9,31 @@ import { apiClient } from '@/services/apiClient';
 import { TaskProgress } from './TaskProgress';
 import { Download, Plus, Loader2 } from 'lucide-react';
 
+const DEFAULT_REQUIREMENTS = `{
+  "tool_name": "文件处理工具",
+  "description": "用于文件上传、下载和格式转换的 MCP 工具，支持多种文件格式",
+  "capabilities": [
+    "文件上传到云存储",
+    "文件下载和预览",
+    "格式转换（PDF、Word、Excel）",
+    "文件压缩和解压",
+    "批量处理"
+  ],
+  "constraints": {
+    "max_file_size": "50MB",
+    "supported_formats": ["pdf", "docx", "xlsx", "zip"],
+    "concurrent_uploads": 5,
+    "storage_provider": "s3"
+  }
+}`;
+
 /**
  * ConfigGenerator Component
  * Generates MCP tool configurations from requirements using AI
  * Provides options to download the generated config or create a tool directly
  */
 export function ConfigGenerator() {
-  const [requirements, setRequirements] = useState('{\n  "purpose": "数据处理工具",\n  "features": ["数据验证", "格式转换"]\n}');
+  const [requirements, setRequirements] = useState(DEFAULT_REQUIREMENTS);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [generatedConfig, setGeneratedConfig] = useState<Record<string, any> | null>(null);
   const { toast } = useToast();
@@ -44,6 +62,26 @@ export function ConfigGenerator() {
   const handleSubmit = () => {
     try {
       const requirementsData = JSON.parse(requirements);
+      
+      // Validate required fields
+      if (!requirementsData.tool_name || !requirementsData.description || !requirementsData.capabilities) {
+        toast({
+          title: '需求格式错误',
+          description: '必须包含 tool_name、description 和 capabilities 字段',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!Array.isArray(requirementsData.capabilities) || requirementsData.capabilities.length === 0) {
+        toast({
+          title: '需求格式错误',
+          description: 'capabilities 必须是非空数组',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       generateMutation.mutate(requirementsData);
     } catch (error) {
       toast({
@@ -57,7 +95,7 @@ export function ConfigGenerator() {
   const handleReset = () => {
     setTaskId(null);
     setGeneratedConfig(null);
-    setRequirements('{\n  "purpose": "数据处理工具",\n  "features": ["数据验证", "格式转换"]\n}');
+    setRequirements(DEFAULT_REQUIREMENTS);
   };
 
   const handleTaskComplete = (result: any) => {
@@ -108,7 +146,15 @@ export function ConfigGenerator() {
               className="font-mono min-h-[300px]"
             />
             <p className="text-sm text-muted-foreground">
-              描述您想要创建的工具需求（JSON 格式）
+              描述您想要创建的工具需求（JSON 格式）。必须包含：
+              <br />
+              • <strong>tool_name</strong>: 工具名称
+              <br />
+              • <strong>description</strong>: 工具描述
+              <br />
+              • <strong>capabilities</strong>: 功能数组
+              <br />
+              • <strong>constraints</strong>: 约束条件（可选）
             </p>
           </div>
 

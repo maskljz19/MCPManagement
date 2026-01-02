@@ -8,6 +8,7 @@ import { useState } from 'react';
 import apiClient from '@/services/apiClient';
 import { format, subDays } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { parseDate } from '@/utils/dateUtils';
 
 type MetricType = 'deployments' | 'tools' | 'documents';
 type TimeRange = '7d' | '30d' | '90d';
@@ -55,15 +56,15 @@ export default function MetricsChart() {
       // Calculate cumulative count up to this date
       if (metricType === 'deployments' && deploymentsData) {
         value = deploymentsData.filter(
-          (d) => new Date(d.deployed_at) <= date
+          (d) => parseDate(d.deployed_at) <= date
         ).length;
       } else if (metricType === 'tools' && toolsData) {
         value = toolsData.items.filter(
-          (t) => new Date(t.created_at) <= date
+          (t) => parseDate(t.created_at) <= date
         ).length;
       } else if (metricType === 'documents' && documentsData) {
         value = documentsData.items.filter(
-          (d) => new Date(d.created_at) <= date
+          (d) => parseDate(d.created_at) <= date
         ).length;
       }
 

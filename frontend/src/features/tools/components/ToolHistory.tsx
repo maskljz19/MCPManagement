@@ -9,6 +9,7 @@ import { zhCN } from 'date-fns/locale';
 import Editor from '@monaco-editor/react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { parseDate } from '@/utils/dateUtils';
 
 interface ToolHistoryProps {
   toolId: string;
@@ -103,7 +104,7 @@ export default function ToolHistory({ toolId }: ToolHistoryProps) {
                       </Badge>
                       <span className="text-sm text-muted-foreground flex items-center">
                         <Clock className="mr-1 h-3 w-3" />
-                        {format(new Date(version.created_at), 'PPP HH:mm', {
+                        {format(parseDate(version.created_at), 'PPP HH:mm', {
                           locale: zhCN,
                         })}
                       </span>
