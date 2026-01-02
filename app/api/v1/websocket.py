@@ -356,13 +356,20 @@ async def websocket_endpoint(
     """
     connection_id = None
     
+    # Authenticate connection BEFORE accepting
+    if not token:
+        logger.warning("websocket_connection_rejected", reason="missing_token")
+        await websocket.close(code=1008)  # Policy Violation
+        return
+    
     try:
-        # Authenticate connection
-        if not token:
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-            return
-        
         user_id = await authenticate_websocket(token)
+    except ValueError as e:
+        logger.warning("websocket_authentication_failed", error=str(e))
+        await websocket.close(code=1008)  # Policy Violation
+        return
+    
+    try:
         
         # Generate connection ID
         import uuid

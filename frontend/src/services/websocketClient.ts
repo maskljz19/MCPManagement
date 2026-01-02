@@ -6,8 +6,11 @@
 type EventHandler = (data: any) => void;
 
 interface WebSocketMessage {
-  type: string;
-  data: any;
+  action?: string;
+  type?: string;
+  task_id?: string;
+  data?: any;
+  [key: string]: any;
 }
 
 interface WebSocketClientConfig {
@@ -96,8 +99,8 @@ class WebSocketClient {
     
     if (this.isConnected()) {
       this.send({
-        type: 'subscribe',
-        data: { task_id: taskId }
+        action: 'subscribe',
+        task_id: taskId
       });
     }
   }
@@ -110,8 +113,8 @@ class WebSocketClient {
     
     if (this.isConnected()) {
       this.send({
-        type: 'unsubscribe',
-        data: { task_id: taskId }
+        action: 'unsubscribe',
+        task_id: taskId
       });
     }
   }
@@ -181,15 +184,22 @@ class WebSocketClient {
     this.startHeartbeat();
     
     // Resubscribe to all previous subscriptions
-    this.subscriptions.forEach(taskId => {
-      this.send({
-        type: 'subscribe',
-        data: { task_id: taskId }
-      });
-    });
+    this.resubscribeAll();
 
     // Emit connection event
     this.emit('connected', {});
+  }
+
+  /**
+   * Resubscribe to all previous subscriptions
+   */
+  private resubscribeAll(): void {
+    this.subscriptions.forEach(taskId => {
+      this.send({
+        action: 'subscribe',
+        task_id: taskId
+      });
+    });
   }
 
   /**
@@ -206,7 +216,8 @@ class WebSocketClient {
       }
 
       // Emit the message to registered handlers
-      this.emit(message.type, message.data);
+      const eventType = message.type || 'message';
+      this.emit(eventType, message.data || message);
     } catch (error) {
       console.error('Failed to parse WebSocket message:', error);
     }
@@ -279,8 +290,7 @@ class WebSocketClient {
     this.heartbeatTimer = setInterval(() => {
       if (this.isConnected()) {
         this.send({
-          type: 'ping',
-          data: {}
+          action: 'ping'
         });
       }
     }, this.heartbeatInterval);
