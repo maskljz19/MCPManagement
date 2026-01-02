@@ -139,7 +139,9 @@ export default function ToolForm() {
       setValue('description', tool.description);
       setValue('version', tool.version);
       setValue('status', tool.status);
-      const configStr = JSON.stringify(tool.config, null, 2);
+      const configStr = tool.config 
+        ? JSON.stringify(tool.config, null, 2)
+        : DEFAULT_TOOL_CONFIG;
       setValue('config', configStr);
       setConfigValue(configStr);
     }

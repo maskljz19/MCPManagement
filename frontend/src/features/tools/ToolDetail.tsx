@@ -38,7 +38,17 @@ export default function ToolDetail() {
   // Fetch tool details
   const { data: tool, isLoading, error } = useQuery({
     queryKey: ['tool', id],
-    queryFn: () => apiClient.tools.get(id!),
+    queryFn: async () => {
+      const result = await apiClient.tools.get(id!);
+      console.log('🔍 Tool fetched:', {
+        id: result.id,
+        name: result.name,
+        hasConfig: !!result.config,
+        configKeys: result.config ? Object.keys(result.config) : [],
+        fullData: result
+      });
+      return result;
+    },
     enabled: !!id,
   });
 
@@ -209,20 +219,26 @@ export default function ToolDetail() {
           <CardDescription>工具的 JSON 配置</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg overflow-hidden">
-            <Editor
-              height="400px"
-              defaultLanguage="json"
-              value={JSON.stringify(tool.config, null, 2)}
-              options={{
-                readOnly: true,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                fontSize: 14,
-              }}
-              theme="vs-dark"
-            />
-          </div>
+          {!tool.config ? (
+            <div className="border rounded-lg p-4 bg-muted">
+              <p className="text-sm text-muted-foreground">暂无配置数据</p>
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <Editor
+                height="400px"
+                defaultLanguage="json"
+                value={JSON.stringify(tool.config, null, 2)}
+                options={{
+                  readOnly: true,
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  fontSize: 14,
+                }}
+                theme="vs-dark"
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -35,7 +35,7 @@ export interface MCPTool {
   version: string;
   author_id: string;
   status: 'DRAFT' | 'ACTIVE' | 'DEPRECATED';
-  config: Record<string, any>;
+  config: Record<string, any> | null;
   created_at: string;
   updated_at: string;
 }

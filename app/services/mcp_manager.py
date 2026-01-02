@@ -166,7 +166,14 @@ class MCPManager:
         # Try cache first using CacheService
         cached_data = await self.cache_service.get_tool(tool_id)
         if cached_data:
-            return MCPTool(**cached_data)
+            # Ensure config is included in cached data
+            tool = MCPTool(**cached_data)
+            # If config is missing from cache, fetch it from MongoDB
+            if tool.config is None:
+                tool.config = await self._get_latest_config(tool_id)
+                # Update cache with config
+                await self.cache_service.set_tool(tool_id, tool.model_dump())
+            return tool
         
         # Query database
         stmt = select(MCPToolModel).where(
@@ -180,10 +187,20 @@ class MCPManager:
             return None
         
         # Convert to Pydantic model
-        tool = MCPTool.model_validate(tool_model)
-        
-        # Get latest config from MongoDB
-        tool.config = await self._get_latest_config(tool_id)
+        tool_dict = {
+            "id": tool_model.id,
+            "name": tool_model.name,
+            "slug": tool_model.slug,
+            "description": tool_model.description,
+            "version": tool_model.version,
+            "author_id": tool_model.author_id,
+            "status": tool_model.status,
+            "created_at": tool_model.created_at,
+            "updated_at": tool_model.updated_at,
+            "deleted_at": tool_model.deleted_at,
+            "config": await self._get_latest_config(tool_id)
+        }
+        tool = MCPTool(**tool_dict)
         
         # Cache the tool using CacheService
         await self.cache_service.set_tool(tool_id, tool.model_dump())
@@ -383,9 +400,20 @@ class MCPManager:
         # Convert to Pydantic models and fetch configs
         tools = []
         for model in tool_models:
-            tool = MCPTool.model_validate(model)
-            # Get latest config from MongoDB
-            tool.config = await self._get_latest_config(UUID(model.id))
+            tool_dict = {
+                "id": model.id,
+                "name": model.name,
+                "slug": model.slug,
+                "description": model.description,
+                "version": model.version,
+                "author_id": model.author_id,
+                "status": model.status,
+                "created_at": model.created_at,
+                "updated_at": model.updated_at,
+                "deleted_at": model.deleted_at,
+                "config": await self._get_latest_config(UUID(model.id))
+            }
+            tool = MCPTool(**tool_dict)
             tools.append(tool)
         
         # Create page object

@@ -70,9 +70,18 @@ export function ImprovementSuggestions() {
       return;
     }
 
+    if (!selectedTool.config) {
+      toast({
+        title: '配置缺失',
+        description: '该工具没有配置信息，无法进行分析',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     improvementMutation.mutate({
       tool_name: selectedTool.name,
-      description: selectedTool.description,
+      description: selectedTool.description || '',
       config: selectedTool.config,
     });
   };
