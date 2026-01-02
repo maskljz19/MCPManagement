@@ -55,7 +55,7 @@ class MCPToolCreate(MCPToolBase):
         ...,
         description="MCP configuration object"
     )
-    author_id: UUID = Field(..., description="ID of the tool author")
+    # author_id is automatically set from the authenticated user, not provided by client
     status: Optional[ToolStatus] = Field(
         default=ToolStatus.DRAFT,
         description="Initial tool status"

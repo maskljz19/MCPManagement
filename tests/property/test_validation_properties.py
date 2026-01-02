@@ -3,16 +3,14 @@
 import pytest
 from hypothesis import given, strategies as st, settings, assume
 from pydantic import ValidationError
-from typing import Dict, Any
 import re
 
-from app.schemas.mcp_tool import MCPToolCreate, MCPToolUpdate
+from app.schemas.mcp_tool import MCPToolCreate
 from app.schemas.knowledge import DocumentCreate, SearchQuery
-from app.schemas.user import UserCreate, UserUpdate
-from app.schemas.ai_analysis import ConfigRequirements, Improvement
+from app.schemas.user import UserCreate
+from app.schemas.ai_analysis import Improvement
 from app.schemas.api_key import APIKeyCreate
 from datetime import datetime, timedelta
-from uuid import uuid4
 
 
 # Helper strategies for generating test data
@@ -95,8 +93,7 @@ def test_mcp_tool_invalid_slug_rejection(invalid_slug, valid_name, valid_version
             slug=invalid_slug,
             version=valid_version,
             config={},
-            author_id=uuid4()
-        )
+            )
     
     # Verify that validation error was raised
     assert exc_info.value is not None
@@ -132,8 +129,7 @@ def test_mcp_tool_invalid_version_rejection(invalid_version, valid_name, valid_s
             slug=valid_slug,
             version=invalid_version,
             config={},
-            author_id=uuid4()
-        )
+            )
     
     # Verify that validation error was raised
     assert exc_info.value is not None
@@ -381,8 +377,7 @@ def test_validation_error_contains_field_details(invalid_slug, valid_name, valid
             slug=invalid_slug,
             version=valid_version,
             config={},
-            author_id=uuid4()
-        )
+            )
     
     # Verify that validation error contains detailed information
     errors = exc_info.value.errors()
@@ -428,8 +423,7 @@ def test_validation_error_identifies_specific_field(invalid_version, valid_name,
             slug=valid_slug,
             version=invalid_version,
             config={},
-            author_id=uuid4()
-        )
+            )
     
     # Verify that validation error identifies the version field
     errors = exc_info.value.errors()
@@ -485,3 +479,4 @@ def test_validation_error_for_empty_required_field(empty_content, valid_title):
         
         # Should have error type
         assert 'type' in error, "Should have error type"
+

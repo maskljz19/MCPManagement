@@ -4,7 +4,7 @@ import json
 from typing import Optional, List, Dict, Any
 from uuid import UUID, uuid4
 from datetime import datetime
-from sqlalchemy import select, update, delete as sql_delete, func
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from redis.asyncio import Redis
@@ -98,12 +98,13 @@ class MCPManager:
     # CRUD Operations
     # ========================================================================
     
-    async def create_tool(self, tool_data: MCPToolCreate) -> MCPTool:
+    async def create_tool(self, tool_data: MCPToolCreate, author_id: UUID) -> MCPTool:
         """
         Create a new MCP tool.
         
         Args:
             tool_data: Tool creation data
+            author_id: ID of the tool author (from authenticated user)
             
         Returns:
             Created MCP tool
@@ -123,7 +124,7 @@ class MCPManager:
             slug=tool_data.slug,
             description=tool_data.description,
             version=tool_data.version,
-            author_id=str(tool_data.author_id),
+            author_id=str(author_id),
             status=tool_data.status or ToolStatus.DRAFT,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
@@ -139,7 +140,7 @@ class MCPManager:
             tool_id=UUID(tool_model.id),
             version=tool_data.version,
             config=tool_data.config,
-            changed_by=tool_data.author_id,
+            changed_by=author_id,
             change_type="create"
         )
         

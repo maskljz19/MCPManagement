@@ -2,13 +2,12 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from motor.motor_asyncio import AsyncIOMotorDatabase
 from redis.asyncio import Redis
 from uuid import UUID
 from typing import List, Optional
 
 from app.core.database import get_db, get_mongodb, get_redis
-from app.services.mcp_manager import MCPManager, MCPToolFilters, Pagination, Page
+from app.services.mcp_manager import MCPManager, MCPToolFilters, Pagination
 from app.schemas.mcp_tool import (
     MCPToolCreate,
     MCPToolUpdate,
@@ -45,10 +44,11 @@ async def create_mcp_tool(
     
     Creates a new MCP tool with the provided metadata and configuration.
     The tool is initially stored in MySQL and the configuration history
-    is recorded in MongoDB.
+    is recorded in MongoDB. The author_id is automatically set from the
+    authenticated user.
     
     Args:
-        tool_data: Tool creation data (name, slug, version, config, etc.)
+        tool_data: Tool creation data (name, slug, version, config, status)
         current_user: Currently authenticated user
         mcp_manager: MCP Manager service
         
@@ -61,11 +61,8 @@ async def create_mcp_tool(
         HTTPException 422: If validation fails
     """
     try:
-        # Override author_id with current user
-        tool_data.author_id = current_user.id
-        
-        # Create tool
-        tool = await mcp_manager.create_tool(tool_data)
+        # Create tool with author_id from current user
+        tool = await mcp_manager.create_tool(tool_data, author_id=current_user.id)
         return tool
     except ValueError as e:
         raise HTTPException(

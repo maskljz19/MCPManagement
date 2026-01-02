@@ -4,7 +4,7 @@ import pytest
 from uuid import uuid4
 from app.services.mcp_server_manager import MCPServerManager
 from app.schemas.deployment import DeploymentConfig
-from app.models.deployment import DeploymentStatus, HealthStatus
+from app.models.deployment import DeploymentStatus
 
 
 @pytest.mark.asyncio
@@ -61,10 +61,9 @@ async def test_deployment_record_creation(db_session, mcp_manager_fixture):
         description="Test description",
         version="1.0.0",
         config={"test": "config"},
-        author_id=uuid4(),
         status=ToolStatus.ACTIVE
     )
-    tool = await mcp_manager_fixture.create_tool(tool_data)
+    tool = await mcp_manager_fixture.create_tool(tool_data, author_id=uuid4())
     
     # Create server manager
     manager = MCPServerManager(
@@ -102,10 +101,9 @@ async def test_deployment_stop(db_session, mcp_manager_fixture):
         description="Test description",
         version="1.0.0",
         config={"test": "config"},
-        author_id=uuid4(),
         status=ToolStatus.ACTIVE
     )
-    tool = await mcp_manager_fixture.create_tool(tool_data)
+    tool = await mcp_manager_fixture.create_tool(tool_data, author_id=uuid4())
     
     # Create server manager
     manager = MCPServerManager(
@@ -166,10 +164,9 @@ async def test_endpoint_url_generation(db_session, mcp_manager_fixture):
         description="Test description",
         version="1.0.0",
         config={"test": "config"},
-        author_id=uuid4(),
         status=ToolStatus.ACTIVE
     )
-    tool = await mcp_manager_fixture.create_tool(tool_data)
+    tool = await mcp_manager_fixture.create_tool(tool_data, author_id=uuid4())
     
     # Create server manager
     manager = MCPServerManager(

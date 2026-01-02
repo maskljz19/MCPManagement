@@ -3,7 +3,7 @@
 import pytest
 from hypothesis import given, strategies as st, settings, HealthCheck
 from uuid import uuid4
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from app.services.mcp_manager import MCPManager
 from app.services.cache_service import CacheService
@@ -56,7 +56,7 @@ def valid_mcp_tool_create(draw):
             min_size=0,
             max_size=5
         )),
-        author_id=uuid4(),
+        # author_id is now set by the service layer, not in the schema
         status=draw(st.sampled_from(list(ToolStatus)))
     )
 
@@ -85,8 +85,11 @@ async def test_cache_hit_on_repeated_access(tool_data, mcp_manager_fixture, redi
     mcp_manager = mcp_manager_fixture
     cache_service = CacheService(redis_client)
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     # Create tool
-    created_tool = await mcp_manager.create_tool(tool_data)
+    created_tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
     tool_id = created_tool.id
     
     # First access - should hit database and cache the result
@@ -145,8 +148,11 @@ async def test_cache_invalidation_on_update(
     mcp_manager = mcp_manager_fixture
     cache_service = CacheService(redis_client)
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     # Create tool
-    created_tool = await mcp_manager.create_tool(tool_data)
+    created_tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
     tool_id = created_tool.id
     original_name = created_tool.name
     
@@ -279,9 +285,12 @@ async def test_cache_fallback_on_failure(tool_data, db_session, mongo_client):
         cache=failed_redis
     )
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     # Create tool - should succeed even without Redis
     try:
-        created_tool = await mcp_manager.create_tool(tool_data)
+        created_tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
         assert created_tool is not None, "Tool creation should succeed without Redis"
         assert created_tool.name == tool_data.name
         

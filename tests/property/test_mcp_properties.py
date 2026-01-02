@@ -2,13 +2,11 @@
 
 import pytest
 from hypothesis import given, strategies as st, settings, HealthCheck
-from uuid import uuid4, UUID
-from datetime import datetime
+from uuid import uuid4
 
-from app.services.mcp_manager import MCPManager, MCPToolFilters, Pagination
-from app.schemas.mcp_tool import MCPToolCreate, MCPToolUpdate, MCPTool
+from app.services.mcp_manager import MCPToolFilters, Pagination
+from app.schemas.mcp_tool import MCPToolCreate, MCPToolUpdate
 from app.models.mcp_tool import ToolStatus
-from app.services.mcp_server_manager import MCPServerManager
 from app.schemas.deployment import DeploymentConfig
 from app.models.deployment import DeploymentStatus
 
@@ -67,7 +65,7 @@ def valid_mcp_tool_create(draw):
             min_size=0,
             max_size=5
         )),
-        author_id=uuid4(),
+        # author_id is now set by the service layer, not in the schema
         status=draw(st.sampled_from(list(ToolStatus)))
     )
 
@@ -95,8 +93,11 @@ async def test_mcp_tool_creation_persistence(tool_data, mcp_manager_fixture):
     """
     mcp_manager = mcp_manager_fixture
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     # Create tool
-    created_tool = await mcp_manager.create_tool(tool_data)
+    created_tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
     
     # Retrieve tool
     retrieved_tool = await mcp_manager.get_tool(created_tool.id)
@@ -110,7 +111,7 @@ async def test_mcp_tool_creation_persistence(tool_data, mcp_manager_fixture):
     assert retrieved_tool.slug == tool_data.slug
     assert retrieved_tool.description == tool_data.description
     assert retrieved_tool.version == tool_data.version
-    assert retrieved_tool.author_id == tool_data.author_id
+    assert retrieved_tool.author_id == author_id
     assert retrieved_tool.status == tool_data.status
 
 
@@ -148,8 +149,11 @@ async def test_version_history_on_update(
     """
     mcp_manager = mcp_manager_fixture
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     # Create initial tool
-    created_tool = await mcp_manager.create_tool(tool_data)
+    created_tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
     initial_version = created_tool.version
     
     # Get initial history count
@@ -196,8 +200,11 @@ async def test_soft_delete_preservation(tool_data, mcp_manager_fixture):
     """
     mcp_manager = mcp_manager_fixture
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     # Create tool
-    created_tool = await mcp_manager.create_tool(tool_data)
+    created_tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
     
     # Delete tool
     delete_result = await mcp_manager.delete_tool(created_tool.id)
@@ -245,10 +252,9 @@ async def test_pagination_invariants(tools_count, page_size, mcp_manager_fixture
             description=f"Description {i}",
             version="1.0.0",
             config={"index": i},
-            author_id=author_id,
             status=ToolStatus.ACTIVE
         )
-        tool = await mcp_manager.create_tool(tool_data)
+        tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
         created_tools.append(tool)
     
     # Test pagination
@@ -301,9 +307,12 @@ async def test_state_persistence_in_mysql(tool_data, operation, mcp_manager_fixt
     """
     mcp_manager = mcp_manager_fixture
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     if operation == 'create':
         # Create tool
-        created_tool = await mcp_manager.create_tool(tool_data)
+        created_tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
         
         # Verify state in MySQL
         retrieved_tool = await mcp_manager.get_tool(created_tool.id)
@@ -313,7 +322,7 @@ async def test_state_persistence_in_mysql(tool_data, operation, mcp_manager_fixt
     
     elif operation == 'update':
         # Create tool first
-        created_tool = await mcp_manager.create_tool(tool_data)
+        created_tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
         
         # Update tool
         update_data = MCPToolUpdate(
@@ -330,7 +339,7 @@ async def test_state_persistence_in_mysql(tool_data, operation, mcp_manager_fixt
     
     elif operation == 'delete':
         # Create tool first
-        created_tool = await mcp_manager.create_tool(tool_data)
+        created_tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
         
         # Delete tool
         await mcp_manager.delete_tool(created_tool.id)
@@ -371,8 +380,11 @@ async def test_configuration_history_append(
     """
     mcp_manager = mcp_manager_fixture
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     # Create tool
-    created_tool = await mcp_manager.create_tool(tool_data)
+    created_tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
     
     # Get initial history count
     initial_history = await mcp_manager.get_tool_history(created_tool.id)
@@ -417,8 +429,11 @@ async def test_version_history_retrieval(
     """
     mcp_manager = mcp_manager_fixture
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     # Create tool
-    created_tool = await mcp_manager.create_tool(tool_data)
+    created_tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
     
     # Perform multiple updates
     for i in range(update_count):
@@ -476,6 +491,7 @@ async def test_deployment_endpoint_uniqueness(
     
     # Create tools and deploy them
     deployments = []
+    author_id = uuid4()  # Use same author for all tools in this test
     for i in range(deployment_count):
         # Create a tool
         tool_data = MCPToolCreate(
@@ -484,10 +500,9 @@ async def test_deployment_endpoint_uniqueness(
             description=f"Description {i}",
             version="1.0.0",
             config={"index": i},
-            author_id=uuid4(),
             status=ToolStatus.ACTIVE
         )
-        tool = await mcp_manager.create_tool(tool_data)
+        tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
         
         # Deploy the tool
         config = DeploymentConfig()
@@ -532,8 +547,11 @@ async def test_request_routing_correctness(
     mcp_server_manager = mcp_server_manager_fixture
     mcp_manager = mcp_manager_fixture
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     # Create and deploy a tool
-    tool = await mcp_manager.create_tool(tool_data)
+    tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
     config = DeploymentConfig()
     deployment = await mcp_server_manager.deploy_server(tool.id, config)
     
@@ -588,8 +606,11 @@ async def test_deployment_shutdown_status(
     mcp_server_manager = mcp_server_manager_fixture
     mcp_manager = mcp_manager_fixture
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     # Create and deploy a tool
-    tool = await mcp_manager.create_tool(tool_data)
+    tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
     config = DeploymentConfig()
     deployment = await mcp_server_manager.deploy_server(tool.id, config)
     
@@ -656,8 +677,11 @@ async def test_usage_statistics_recording(
     mcp_manager = mcp_manager_fixture
     mcp_server_manager = mcp_server_manager_fixture
     
+    # Generate author_id for this test
+    author_id = uuid4()
+    
     # Create and deploy a tool
-    tool = await mcp_manager.create_tool(tool_data)
+    tool = await mcp_manager.create_tool(tool_data, author_id=author_id)
     config = DeploymentConfig()
     deployment = await mcp_server_manager.deploy_server(tool.id, config)
     
