@@ -14,7 +14,7 @@ import websocketClient from '@/services/websocketClient';
  * - Handles reconnection attempts
  */
 export function useWebSocket() {
-  const { isAuthenticated, accessToken } = useAuthStore();
+  const { isAuthenticated, accessToken, clearAuth } = useAuthStore();
   const {
     setStatus,
     setConnected,
@@ -24,8 +24,11 @@ export function useWebSocket() {
   } = useWebSocketStore();
 
   useEffect(() => {
-    // Only connect if user is authenticated and has a token
+    // Disconnect if user is not authenticated
     if (!isAuthenticated || !accessToken) {
+      if (websocketClient.isConnected()) {
+        websocketClient.disconnect();
+      }
       return;
     }
 
@@ -57,12 +60,21 @@ export function useWebSocket() {
       setError(data.error);
     };
 
+    const handleAuthFailed = () => {
+      setStatus('error');
+      setError('认证失败，请重新登录');
+      // Token is invalid or expired, logout user
+      websocketClient.disconnect();
+      clearAuth();
+    };
+
     // Register event handlers
     websocketClient.on('connected', handleConnected);
     websocketClient.on('disconnected', handleDisconnected);
     websocketClient.on('reconnecting', handleReconnecting);
     websocketClient.on('reconnect_failed', handleReconnectFailed);
     websocketClient.on('error', handleError);
+    websocketClient.on('auth_failed', handleAuthFailed);
 
     // Connect to WebSocket if not already connected
     if (!websocketClient.isConnected()) {
@@ -81,10 +93,12 @@ export function useWebSocket() {
       websocketClient.off('reconnecting', handleReconnecting);
       websocketClient.off('reconnect_failed', handleReconnectFailed);
       websocketClient.off('error', handleError);
+      websocketClient.off('auth_failed', handleAuthFailed);
     };
   }, [
     isAuthenticated,
     accessToken,
+    clearAuth,
     setStatus,
     setConnected,
     setError,

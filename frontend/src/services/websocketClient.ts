@@ -245,6 +245,16 @@ class WebSocketClient {
       reason: event.reason
     });
 
+    // Don't reconnect if authentication failed (code 1008 = Policy Violation)
+    if (event.code === 1008) {
+      console.error('WebSocket authentication failed. Please login again.');
+      this.emit('auth_failed', {
+        code: event.code,
+        reason: event.reason
+      });
+      return;
+    }
+
     // Attempt to reconnect if not manually closed
     if (!this.isManualClose) {
       this.scheduleReconnect();
@@ -334,7 +344,7 @@ class WebSocketClient {
 }
 
 // Create singleton instance
-const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
+const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/api/v1/ws';
 const websocketClient = new WebSocketClient({
   url: wsUrl,
   reconnectInterval: 3000,

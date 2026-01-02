@@ -358,15 +358,15 @@ async def websocket_endpoint(
     
     # Authenticate connection BEFORE accepting
     if not token:
-        logger.warning("websocket_connection_rejected", reason="missing_token")
-        await websocket.close(code=1008)  # Policy Violation
+        logger.debug("websocket_connection_rejected", reason="missing_token")
+        await websocket.close(code=1008, reason="Missing authentication token")
         return
     
     try:
         user_id = await authenticate_websocket(token)
     except ValueError as e:
-        logger.warning("websocket_authentication_failed", error=str(e))
-        await websocket.close(code=1008)  # Policy Violation
+        logger.debug("websocket_authentication_failed", error=str(e))
+        await websocket.close(code=1008, reason="Authentication failed")
         return
     
     try:
