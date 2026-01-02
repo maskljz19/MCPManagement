@@ -51,7 +51,7 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
             id: payload.user_id,
             username: payload.username,
             email: '',
-            role: payload.role || 'viewer',
+            role: payload.role || 'VIEWER',
             is_active: true,
             created_at: new Date().toISOString(),
           };
@@ -97,7 +97,7 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
   if (requiredPermission && user) {
     // Simple permission check - can be extended based on requirements
     // For now, we'll check if user has admin role for admin-only routes
-    if (requiredPermission === 'admin' && user.role !== 'admin') {
+    if (requiredPermission === 'admin' && user.role !== 'ADMIN') {
       console.log('🚫 Insufficient permissions, redirecting to dashboard');
       // Redirect to dashboard if user doesn't have required permission
       return <Navigate to="/dashboard" replace />;

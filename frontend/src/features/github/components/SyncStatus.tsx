@@ -38,7 +38,7 @@ export function SyncStatus({ taskId, open, onOpenChange, onComplete }: SyncStatu
     refetchInterval: (query) => {
       // Stop polling if task is completed or failed
       const data = query.state.data;
-      if (data?.status === 'completed' || data?.status === 'failed') {
+      if (data?.status === 'COMPLETED' || data?.status === 'FAILED') {
         return false;
       }
       return 2000; // Poll every 2 seconds
@@ -84,11 +84,11 @@ export function SyncStatus({ taskId, open, onOpenChange, onComplete }: SyncStatu
     if (!taskStatus) return <Loader2 className="h-5 w-5 animate-spin" />;
 
     switch (taskStatus.status) {
-      case 'completed':
+      case 'COMPLETED':
         return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case 'failed':
+      case 'FAILED':
         return <XCircle className="h-5 w-5 text-destructive" />;
-      case 'running':
+      case 'RUNNING':
         return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />;
       default:
         return <Loader2 className="h-5 w-5 animate-spin" />;
@@ -99,13 +99,13 @@ export function SyncStatus({ taskId, open, onOpenChange, onComplete }: SyncStatu
     if (!taskStatus) return '初始化中...';
 
     switch (taskStatus.status) {
-      case 'pending':
+      case 'PENDING':
         return '等待中...';
-      case 'running':
+      case 'RUNNING':
         return '同步中...';
-      case 'completed':
+      case 'COMPLETED':
         return '同步完成';
-      case 'failed':
+      case 'FAILED':
         return '同步失败';
       default:
         return '未知状态';
@@ -116,11 +116,11 @@ export function SyncStatus({ taskId, open, onOpenChange, onComplete }: SyncStatu
     if (!taskStatus) return 'secondary';
 
     switch (taskStatus.status) {
-      case 'completed':
+      case 'COMPLETED':
         return 'default';
-      case 'failed':
+      case 'FAILED':
         return 'destructive';
-      case 'running':
+      case 'RUNNING':
         return 'secondary';
       default:
         return 'outline';
@@ -148,7 +148,7 @@ export function SyncStatus({ taskId, open, onOpenChange, onComplete }: SyncStatu
           </div>
 
           {/* Progress Bar */}
-          {taskStatus?.status === 'running' && (
+          {taskStatus?.status === 'RUNNING' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">进度</span>
@@ -159,7 +159,7 @@ export function SyncStatus({ taskId, open, onOpenChange, onComplete }: SyncStatu
           )}
 
           {/* Success Result */}
-          {taskStatus?.status === 'completed' && taskStatus.result && (
+          {taskStatus?.status === 'COMPLETED' && taskStatus.result && (
             <Alert>
               <CheckCircle2 className="h-4 w-4" />
               <AlertDescription>
@@ -181,7 +181,7 @@ export function SyncStatus({ taskId, open, onOpenChange, onComplete }: SyncStatu
           )}
 
           {/* Error Result */}
-          {taskStatus?.status === 'failed' && (
+          {taskStatus?.status === 'FAILED' && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>

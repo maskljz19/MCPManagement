@@ -42,8 +42,8 @@ export function DeploymentForm({ onSuccess, onCancel }: DeploymentFormProps) {
 
   // Fetch available tools
   const { data: toolsResponse, isLoading: isLoadingTools } = useQuery({
-    queryKey: ['tools', { status: 'active' }],
-    queryFn: () => apiClient.tools.list({ status: 'active' }),
+    queryKey: ['tools', { status: 'ACTIVE' }],
+    queryFn: () => apiClient.tools.list({ status: 'ACTIVE' }),
   });
 
   // Create deployment mutation

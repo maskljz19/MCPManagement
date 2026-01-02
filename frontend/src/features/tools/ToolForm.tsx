@@ -32,7 +32,7 @@ const toolFormSchema = z.object({
     .regex(/^[a-z0-9-]+$/, 'Slug 只能包含小写字母、数字和连字符'),
   description: z.string().min(1, '描述不能为空').max(500, '描述不能超过500个字符'),
   version: z.string().min(1, '版本不能为空').regex(/^\d+\.\d+\.\d+$/, '版本格式应为 x.y.z'),
-  status: z.enum(['draft', 'active', 'deprecated']),
+  status: z.enum(['DRAFT', 'ACTIVE', 'DEPRECATED']),
   config: z.string().min(1, '配置不能为空'),
 });
 
@@ -69,7 +69,7 @@ export default function ToolForm() {
       slug: '',
       description: '',
       version: '1.0.0',
-      status: 'draft',
+      status: 'DRAFT',
       config: '{}',
     },
   });
@@ -309,16 +309,16 @@ export default function ToolForm() {
                 <Select
                   value={statusValue}
                   onValueChange={(value) =>
-                    setValue('status', value as 'draft' | 'active' | 'deprecated')
+                    setValue('status', value as 'DRAFT' | 'ACTIVE' | 'DEPRECATED')
                   }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="draft">草稿</SelectItem>
-                    <SelectItem value="active">活跃</SelectItem>
-                    <SelectItem value="deprecated">已弃用</SelectItem>
+                    <SelectItem value="DRAFT">草稿</SelectItem>
+                    <SelectItem value="ACTIVE">活跃</SelectItem>
+                    <SelectItem value="DEPRECATED">已弃用</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.status && (

@@ -150,9 +150,9 @@ export default function ToolList() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">全部状态</SelectItem>
-            <SelectItem value="draft">草稿</SelectItem>
-            <SelectItem value="active">活跃</SelectItem>
-            <SelectItem value="deprecated">已弃用</SelectItem>
+            <SelectItem value="DRAFT">草稿</SelectItem>
+            <SelectItem value="ACTIVE">活跃</SelectItem>
+            <SelectItem value="DEPRECATED">已弃用</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -126,10 +126,10 @@ class AuthService {
     }
 
     // Validate role
-    const validRoles = ['admin', 'developer', 'viewer'] as const;
+    const validRoles = ['ADMIN', 'DEVELOPER', 'VIEWER'] as const;
     const role = validRoles.includes(payload.role as any) 
-      ? (payload.role as 'admin' | 'developer' | 'viewer')
-      : 'viewer';
+      ? (payload.role as 'ADMIN' | 'DEVELOPER' | 'VIEWER')
+      : 'VIEWER';
 
     return {
       id: payload.user_id,

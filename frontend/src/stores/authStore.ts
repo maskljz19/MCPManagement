@@ -13,7 +13,7 @@ interface User {
   id: string;
   username: string;
   email: string;
-  role: 'admin' | 'developer' | 'viewer';
+  role: 'ADMIN' | 'DEVELOPER' | 'VIEWER';
   is_active: boolean;
   created_at: string;
 }

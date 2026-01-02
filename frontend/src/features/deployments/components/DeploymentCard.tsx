@@ -15,13 +15,13 @@ interface DeploymentCardProps {
 export function DeploymentCard({ deployment, onViewDetails, onStop }: DeploymentCardProps) {
   const getStatusColor = (status: Deployment['status']) => {
     switch (status) {
-      case 'running':
+      case 'RUNNING':
         return 'bg-green-500';
-      case 'starting':
+      case 'STARTING':
         return 'bg-blue-500';
-      case 'stopped':
+      case 'STOPPED':
         return 'bg-gray-500';
-      case 'failed':
+      case 'FAILED':
         return 'bg-red-500';
       default:
         return 'bg-gray-500';
@@ -30,13 +30,13 @@ export function DeploymentCard({ deployment, onViewDetails, onStop }: Deployment
 
   const getStatusText = (status: Deployment['status']) => {
     switch (status) {
-      case 'running':
+      case 'RUNNING':
         return '运行中';
-      case 'starting':
+      case 'STARTING':
         return '启动中';
-      case 'stopped':
+      case 'STOPPED':
         return '已停止';
-      case 'failed':
+      case 'FAILED':
         return '失败';
       default:
         return status;
@@ -45,11 +45,11 @@ export function DeploymentCard({ deployment, onViewDetails, onStop }: Deployment
 
   const getHealthStatusIcon = (healthStatus: Deployment['health_status']) => {
     switch (healthStatus) {
-      case 'healthy':
+      case 'HEALTHY':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'unhealthy':
+      case 'UNHEALTHY':
         return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case 'unknown':
+      case 'UNKNOWN':
         return <Clock className="h-4 w-4 text-gray-500" />;
       default:
         return <Clock className="h-4 w-4 text-gray-500" />;
@@ -58,11 +58,11 @@ export function DeploymentCard({ deployment, onViewDetails, onStop }: Deployment
 
   const getHealthStatusText = (healthStatus: Deployment['health_status']) => {
     switch (healthStatus) {
-      case 'healthy':
+      case 'HEALTHY':
         return '健康';
-      case 'unhealthy':
+      case 'UNHEALTHY':
         return '不健康';
-      case 'unknown':
+      case 'UNKNOWN':
         return '未知';
       default:
         return healthStatus;
@@ -151,7 +151,7 @@ export function DeploymentCard({ deployment, onViewDetails, onStop }: Deployment
         >
           查看详情
         </Button>
-        {deployment.status === 'running' && (
+        {deployment.status === 'RUNNING' && (
           <Button
             variant="destructive"
             size="sm"

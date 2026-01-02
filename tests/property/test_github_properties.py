@@ -105,7 +105,7 @@ class TestGitHubConnectionValidation:
                 slug="test-tool",
                 version="1.0.0",
                 author_id=str(user_id),
-                status="active"
+                status="ACTIVE"
             ))
             mock_session.execute = AsyncMock(return_value=mock_result)
         
@@ -200,7 +200,7 @@ class TestRepositorySyncConsistency:
             slug="test-tool",
             version="1.0.0",
             author_id=mock_connection.user_id,
-            status="active"
+            status="ACTIVE"
         )
         
         # Mock GitHub API

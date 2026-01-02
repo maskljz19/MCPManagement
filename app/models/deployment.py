@@ -10,17 +10,17 @@ from app.models.base import BaseModel
 
 class DeploymentStatus(str, enum.Enum):
     """Status of an MCP deployment"""
-    STARTING = "starting"
-    RUNNING = "running"
-    STOPPED = "stopped"
-    FAILED = "failed"
+    STARTING = "STARTING"
+    RUNNING = "RUNNING"
+    STOPPED = "STOPPED"
+    FAILED = "FAILED"
 
 
 class HealthStatus(str, enum.Enum):
     """Health status of a deployment"""
-    HEALTHY = "healthy"
-    UNHEALTHY = "unhealthy"
-    UNKNOWN = "unknown"
+    HEALTHY = "HEALTHY"
+    UNHEALTHY = "UNHEALTHY"
+    UNKNOWN = "UNKNOWN"
 
 
 class MCPDeploymentModel(BaseModel):

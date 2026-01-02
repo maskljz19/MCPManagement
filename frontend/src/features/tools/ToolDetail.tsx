@@ -22,9 +22,9 @@ import {
 import ToolHistory from './components/ToolHistory';
 
 const statusConfig = {
-  draft: { label: '草稿', variant: 'secondary' as const },
-  active: { label: '活跃', variant: 'default' as const },
-  deprecated: { label: '已弃用', variant: 'destructive' as const },
+  DRAFT: { label: '草稿', variant: 'secondary' as const },
+  ACTIVE: { label: '活跃', variant: 'default' as const },
+  DEPRECATED: { label: '已弃用', variant: 'destructive' as const },
 };
 
 export default function ToolDetail() {

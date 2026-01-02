@@ -42,7 +42,7 @@ export function useWebSocket() {
       setConnected(false);
     };
 
-    const handleReconnecting = (data: { attempt: number; maxAttempts: number }) => {
+    const handleReconnecting = (_data: { attempt: number; maxAttempts: number }) => {
       setStatus('reconnecting');
       incrementReconnectAttempts();
     };

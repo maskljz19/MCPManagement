@@ -30,7 +30,7 @@ export function TaskProgress({ taskId, onComplete }: TaskProgressProps) {
     refetchInterval: (query) => {
       // Stop polling if task is completed or failed
       const data = query.state.data;
-      if (data?.status === 'completed' || data?.status === 'failed') {
+      if (data?.status === 'COMPLETED' || data?.status === 'FAILED') {
         return false;
       }
       // Poll every 2 seconds for pending/running tasks
@@ -52,7 +52,7 @@ export function TaskProgress({ taskId, onComplete }: TaskProgressProps) {
         setTaskStatus(data);
         
         // Call onComplete callback when task is completed
-        if (data.status === 'completed' && onComplete) {
+        if (data.status === 'COMPLETED' && onComplete) {
           onComplete(data.result);
         }
       }
@@ -90,11 +90,11 @@ export function TaskProgress({ taskId, onComplete }: TaskProgressProps) {
 
   const getStatusIcon = () => {
     switch (taskStatus.status) {
-      case 'completed':
+      case 'COMPLETED':
         return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case 'failed':
+      case 'FAILED':
         return <XCircle className="h-5 w-5 text-red-500" />;
-      case 'running':
+      case 'RUNNING':
         return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />;
       default:
         return <Loader2 className="h-5 w-5 text-gray-500" />;
@@ -103,17 +103,17 @@ export function TaskProgress({ taskId, onComplete }: TaskProgressProps) {
 
   const getStatusBadge = () => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      pending: 'secondary',
-      running: 'default',
-      completed: 'outline',
-      failed: 'destructive',
+      PENDING: 'secondary',
+      RUNNING: 'default',
+      COMPLETED: 'outline',
+      FAILED: 'destructive',
     };
 
     const labels: Record<string, string> = {
-      pending: '等待中',
-      running: '运行中',
-      completed: '已完成',
-      failed: '失败',
+      PENDING: '等待中',
+      RUNNING: '运行中',
+      COMPLETED: '已完成',
+      FAILED: '失败',
     };
 
     return (
@@ -133,7 +133,7 @@ export function TaskProgress({ taskId, onComplete }: TaskProgressProps) {
         {getStatusBadge()}
       </div>
 
-      {(taskStatus.status === 'running' || taskStatus.status === 'pending') && (
+      {(taskStatus.status === 'RUNNING' || taskStatus.status === 'PENDING') && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">进度</span>
@@ -143,7 +143,7 @@ export function TaskProgress({ taskId, onComplete }: TaskProgressProps) {
         </div>
       )}
 
-      {taskStatus.status === 'completed' && taskStatus.result && (
+      {taskStatus.status === 'COMPLETED' && taskStatus.result && (
         <Alert>
           <CheckCircle2 className="h-4 w-4" />
           <AlertTitle>分析完成</AlertTitle>
@@ -188,7 +188,7 @@ export function TaskProgress({ taskId, onComplete }: TaskProgressProps) {
         </Alert>
       )}
 
-      {taskStatus.status === 'failed' && taskStatus.error && (
+      {taskStatus.status === 'FAILED' && taskStatus.error && (
         <Alert variant="destructive">
           <XCircle className="h-4 w-4" />
           <AlertTitle>任务失败</AlertTitle>

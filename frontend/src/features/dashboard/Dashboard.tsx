@@ -40,7 +40,7 @@ export default function Dashboard() {
   });
 
   // Calculate running deployments
-  const runningDeployments = deploymentsData?.filter((d) => d.status === 'running').length || 0;
+  const runningDeployments = deploymentsData?.filter((d) => d.status === 'RUNNING').length || 0;
 
   const isLoading = toolsLoading || deploymentsLoading || documentsLoading;
 

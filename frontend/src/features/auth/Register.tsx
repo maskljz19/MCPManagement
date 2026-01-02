@@ -40,7 +40,7 @@ const registerSchema = z.object({
     .regex(/[a-z]/, '密码必须包含至少一个小写字母')
     .regex(/[0-9]/, '密码必须包含至少一个数字'),
   confirmPassword: z.string().min(1, '请确认密码'),
-  role: z.enum(['admin', 'developer', 'viewer']).optional(),
+  role: z.enum(['ADMIN', 'DEVELOPER', 'VIEWER']).optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: '两次输入的密码不一致',
   path: ['confirmPassword'],
@@ -53,7 +53,7 @@ export default function Register() {
   const { toast } = useToast();
   const { setAuth } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'admin' | 'developer' | 'viewer'>('developer');
+  const [selectedRole, setSelectedRole] = useState<'ADMIN' | 'DEVELOPER' | 'VIEWER'>('DEVELOPER');
 
   const {
     register,
@@ -63,7 +63,7 @@ export default function Register() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      role: 'developer',
+      role: 'DEVELOPER',
     },
   });
 
@@ -125,7 +125,7 @@ export default function Register() {
   };
 
   const handleRoleChange = (value: string) => {
-    const role = value as 'admin' | 'developer' | 'viewer';
+    const role = value as 'ADMIN' | 'DEVELOPER' | 'VIEWER';
     setSelectedRole(role);
     setValue('role', role);
   };
@@ -220,9 +220,9 @@ export default function Register() {
               <SelectValue placeholder="选择角色" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="viewer">查看者</SelectItem>
-              <SelectItem value="developer">开发者</SelectItem>
-              <SelectItem value="admin">管理员</SelectItem>
+              <SelectItem value="VIEWER">查看者</SelectItem>
+              <SelectItem value="DEVELOPER">开发者</SelectItem>
+              <SelectItem value="ADMIN">管理员</SelectItem>
             </SelectContent>
           </Select>
           {errors.role && (

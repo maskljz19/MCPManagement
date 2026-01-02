@@ -10,9 +10,9 @@ from app.models.base import BaseModel
 
 class ToolStatus(str, enum.Enum):
     """Status of an MCP tool"""
-    DRAFT = "draft"
-    ACTIVE = "active"
-    DEPRECATED = "deprecated"
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    DEPRECATED = "DEPRECATED"
 
 
 class MCPToolModel(BaseModel):

@@ -3,7 +3,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  role: 'admin' | 'developer' | 'viewer';
+  role: 'ADMIN' | 'DEVELOPER' | 'VIEWER';
   is_active: boolean;
   created_at: string;
 }
@@ -23,7 +23,7 @@ export interface RegisterData {
   username: string;
   email: string;
   password: string;
-  role?: 'admin' | 'developer' | 'viewer';
+  role?: 'ADMIN' | 'DEVELOPER' | 'VIEWER';
 }
 
 // MCP Tool types
@@ -34,7 +34,7 @@ export interface MCPTool {
   description: string;
   version: string;
   author_id: string;
-  status: 'draft' | 'active' | 'deprecated';
+  status: 'DRAFT' | 'ACTIVE' | 'DEPRECATED';
   config: Record<string, any>;
   created_at: string;
   updated_at: string;
@@ -45,7 +45,7 @@ export interface CreateToolData {
   slug: string;
   description: string;
   version: string;
-  status?: 'draft' | 'active' | 'deprecated';
+  status?: 'DRAFT' | 'ACTIVE' | 'DEPRECATED';
   config: Record<string, any>;
 }
 
@@ -54,7 +54,7 @@ export interface UpdateToolData {
   slug?: string;
   description?: string;
   version?: string;
-  status?: 'draft' | 'active' | 'deprecated';
+  status?: 'DRAFT' | 'ACTIVE' | 'DEPRECATED';
   config?: Record<string, any>;
 }
 
@@ -113,7 +113,7 @@ export interface SearchResults {
 // Task types
 export interface Task {
   task_id: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
   progress?: number;
   result?: any;
   error?: string;
@@ -129,7 +129,7 @@ export interface TaskResponse {
 
 export interface TaskStatus {
   task_id: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
   progress?: number;
   result?: any;
   error?: string;
@@ -154,7 +154,7 @@ export interface GitHubConnection {
   connection_id: string;
   repository_url: string;
   tool_id: string;
-  status: 'connected' | 'syncing' | 'error';
+  status: 'CONNECTED' | 'SYNCING' | 'ERROR';
   last_sync?: string;
   created_at: string;
 }
@@ -171,8 +171,8 @@ export interface Deployment {
   tool_id: string;
   tool_name: string;
   endpoint_url: string;
-  status: 'starting' | 'running' | 'stopped' | 'failed';
-  health_status: 'healthy' | 'unhealthy' | 'unknown';
+  status: 'STARTING' | 'RUNNING' | 'STOPPED' | 'FAILED';
+  health_status: 'HEALTHY' | 'UNHEALTHY' | 'UNKNOWN';
   deployed_at: string;
   last_health_check?: string;
   metrics?: {
@@ -216,7 +216,7 @@ export interface HealthStatus {
   status: string;
   services: {
     [key: string]: {
-      status: 'healthy' | 'unhealthy' | 'unknown';
+      status: 'HEALTHY' | 'UNHEALTHY' | 'UNKNOWN';
       response_time_ms?: number;
       message?: string;
     };

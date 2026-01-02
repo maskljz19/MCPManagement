@@ -53,7 +53,7 @@ async def test_create_mcp_tool_success(client: AsyncClient, db_session: AsyncSes
     assert data["name"] == "Test Tool"
     assert data["slug"] == "test-tool"
     assert data["version"] == "1.0.0"
-    assert data["status"] == "draft"
+    assert data["status"] == "DRAFT"
     assert "id" in data
     
     # Verify tool was created in database
@@ -164,7 +164,7 @@ async def test_get_mcp_tool_success(client: AsyncClient, db_session: AsyncSessio
     data = response.json()
     assert data["name"] == "Existing Tool"
     assert data["slug"] == "existing-tool"
-    assert data["status"] == "active"
+    assert data["status"] == "ACTIVE"
 
 
 @pytest.mark.asyncio
@@ -287,7 +287,7 @@ async def test_update_mcp_tool_success(client: AsyncClient, db_session: AsyncSes
     update_data = {
         "name": "Updated Name",
         "version": "1.1.0",
-        "status": "active"
+        "status": "ACTIVE"
     }
     
     response = await client.put(
@@ -300,7 +300,7 @@ async def test_update_mcp_tool_success(client: AsyncClient, db_session: AsyncSes
     data = response.json()
     assert data["name"] == "Updated Name"
     assert data["version"] == "1.1.0"
-    assert data["status"] == "active"
+    assert data["status"] == "ACTIVE"
 
 
 @pytest.mark.asyncio

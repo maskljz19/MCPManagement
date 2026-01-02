@@ -5,7 +5,7 @@ import { useMemo } from 'react';
  * Permission definitions based on user roles
  */
 const PERMISSIONS = {
-  admin: {
+  ADMIN: {
     mcps: { create: true, read: true, update: true, delete: true },
     knowledge: { create: true, read: true, update: true, delete: true },
     deployments: { create: true, read: true, update: true, delete: true },
@@ -13,7 +13,7 @@ const PERMISSIONS = {
     analysis: { create: true, read: true, update: true, delete: true },
     apiKeys: { create: true, read: true, update: true, delete: true },
   },
-  developer: {
+  DEVELOPER: {
     mcps: { create: true, read: true, update: true, delete: true },
     knowledge: { create: true, read: true, update: true, delete: true },
     deployments: { create: true, read: true, update: true, delete: true },
@@ -21,7 +21,7 @@ const PERMISSIONS = {
     analysis: { create: true, read: true, update: true, delete: true },
     apiKeys: { create: true, read: true, update: true, delete: true },
   },
-  viewer: {
+  VIEWER: {
     mcps: { create: false, read: true, update: false, delete: false },
     knowledge: { create: false, read: true, update: false, delete: false },
     deployments: { create: false, read: true, update: false, delete: false },
@@ -31,7 +31,7 @@ const PERMISSIONS = {
   },
 } as const;
 
-type Resource = keyof typeof PERMISSIONS.admin;
+type Resource = keyof typeof PERMISSIONS.ADMIN;
 type Action = 'create' | 'read' | 'update' | 'delete';
 
 /**
@@ -42,9 +42,9 @@ export function usePermissions() {
 
   const permissions = useMemo(() => {
     if (!user) {
-      return PERMISSIONS.viewer;
+      return PERMISSIONS.VIEWER;
     }
-    return PERMISSIONS[user.role] || PERMISSIONS.viewer;
+    return PERMISSIONS[user.role] || PERMISSIONS.VIEWER;
   }, [user]);
 
   const can = (resource: Resource, action: Action): boolean => {
@@ -63,6 +63,6 @@ export function usePermissions() {
     canUpdate,
     canDelete,
     permissions,
-    role: user?.role || 'viewer',
+    role: user?.role || 'VIEWER',
   };
 }

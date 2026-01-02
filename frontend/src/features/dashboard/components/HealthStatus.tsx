@@ -14,9 +14,9 @@ export default function HealthStatus() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'healthy':
+      case 'HEALTHY':
         return <CheckCircle2 className="h-5 w-5 text-green-600" />;
-      case 'unhealthy':
+      case 'UNHEALTHY':
         return <XCircle className="h-5 w-5 text-red-600" />;
       default:
         return <AlertCircle className="h-5 w-5 text-yellow-600" />;
@@ -25,13 +25,13 @@ export default function HealthStatus() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'healthy':
+      case 'HEALTHY':
         return (
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
             健康
           </Badge>
         );
-      case 'unhealthy':
+      case 'UNHEALTHY':
         return (
           <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
             不健康
@@ -48,9 +48,9 @@ export default function HealthStatus() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'healthy':
+      case 'HEALTHY':
         return 'border-l-green-500';
-      case 'unhealthy':
+      case 'UNHEALTHY':
         return 'border-l-red-500';
       default:
         return 'border-l-yellow-500';
@@ -97,7 +97,7 @@ export default function HealthStatus() {
                 key={serviceName}
                 className={`flex items-center justify-between p-3 border-l-4 border rounded-lg ${getStatusColor(
                   serviceData.status
-                )} ${serviceData.status === 'unhealthy' ? 'bg-red-50' : ''}`}
+                )} ${serviceData.status === 'UNHEALTHY' ? 'bg-red-50' : ''}`}
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">

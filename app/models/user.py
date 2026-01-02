@@ -12,9 +12,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserRole(str, enum.Enum):
     """User role for RBAC"""
-    ADMIN = "admin"
-    DEVELOPER = "developer"
-    VIEWER = "viewer"
+    ADMIN = "ADMIN"
+    DEVELOPER = "DEVELOPER"
+    VIEWER = "VIEWER"
     
     @classmethod
     def normalize(cls, value: str) -> 'UserRole':

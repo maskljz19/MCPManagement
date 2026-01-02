@@ -75,11 +75,11 @@ export function GitHubConnectionList({ onSync, onDisconnect }: GitHubConnectionL
 
   const getStatusIcon = (status: GitHubConnection['status']) => {
     switch (status) {
-      case 'connected':
+      case 'CONNECTED':
         return <CheckCircle2 className="h-4 w-4" />;
-      case 'syncing':
+      case 'SYNCING':
         return <RefreshCw className="h-4 w-4 animate-spin" />;
-      case 'error':
+      case 'ERROR':
         return <AlertCircle className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
@@ -88,11 +88,11 @@ export function GitHubConnectionList({ onSync, onDisconnect }: GitHubConnectionL
 
   const getStatusVariant = (status: GitHubConnection['status']) => {
     switch (status) {
-      case 'connected':
+      case 'CONNECTED':
         return 'default';
-      case 'syncing':
+      case 'SYNCING':
         return 'secondary';
-      case 'error':
+      case 'ERROR':
         return 'destructive';
       default:
         return 'outline';
@@ -101,11 +101,11 @@ export function GitHubConnectionList({ onSync, onDisconnect }: GitHubConnectionL
 
   const getStatusText = (status: GitHubConnection['status']) => {
     switch (status) {
-      case 'connected':
+      case 'CONNECTED':
         return '已连接';
-      case 'syncing':
+      case 'SYNCING':
         return '同步中';
-      case 'error':
+      case 'ERROR':
         return '错误';
       default:
         return '未知';
@@ -153,7 +153,7 @@ export function GitHubConnectionList({ onSync, onDisconnect }: GitHubConnectionL
                   variant="outline"
                   size="sm"
                   onClick={() => onSync?.(connection.connection_id)}
-                  disabled={connection.status === 'syncing'}
+                  disabled={connection.status === 'SYNCING'}
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   同步
@@ -162,7 +162,7 @@ export function GitHubConnectionList({ onSync, onDisconnect }: GitHubConnectionL
                   variant="outline"
                   size="sm"
                   onClick={() => onDisconnect?.(connection.connection_id)}
-                  disabled={connection.status === 'syncing'}
+                  disabled={connection.status === 'SYNCING'}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   断开
