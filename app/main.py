@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from pathlib import Path
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 from app.api.v1 import health, tasks, auth, mcps, knowledge, analyze, github, deployments, websocket, mcp_execute, schedules, execution_logs, batch, queue, user_resources, admin
 from app.core.database import get_db
@@ -190,6 +191,15 @@ async def route_mcp_request(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Failed to route request: {str(e)}"
         )
+
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint"""
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST
+    )
 
 
 @app.get("/")

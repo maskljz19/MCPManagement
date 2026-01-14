@@ -430,8 +430,11 @@ services:
   mysql-exporter:
     image: prom/mysqld-exporter:v0.15.1
     container_name: mcp-mysql-exporter
+    command:
+      - "--mysqld.username=${MYSQL_USER}"
+      - "--mysqld.address=mysql:3306"
     environment:
-      - DATA_SOURCE_NAME=${MYSQL_USER}:${MYSQL_PASSWORD}@(mysql:3306)/${MYSQL_DATABASE}
+      - MYSQLD_EXPORTER_PASSWORD=${MYSQL_PASSWORD}
     ports:
       - "9104:9104"
     depends_on:
@@ -462,7 +465,6 @@ services:
       - '--es.uri=http://elasticsearch:9200'
       - '--es.all'
       - '--es.indices'
-      - '--es.cluster_settings'
     ports:
       - "9114:9114"
     depends_on:
