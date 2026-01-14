@@ -1,0 +1,351 @@
+# Prometheus Alert Rules for MCP Platform Backend
+# These rules define alerts for key metrics and anomalies
+
+groups:
+  # ============================================================================
+  # MCP Execution Alerts
+  # ============================================================================
+  - name: mcp_execution_alerts
+    interval: 30s
+    rules:
+      # High error rate alert
+      - alert: HighExecutionErrorRate
+        expr: |
+          (
+            sum(rate(mcp_executions_total{status="failed"}[5m])) by (tool_id, tool_name)
+            /
+            sum(rate(mcp_executions_total[5m])) by (tool_id, tool_name)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: mcp_execution
+        annotations:
+          summary: "High error rate for MCP tool {{ $labels.tool_name }}"
+          description: "Tool {{ $labels.tool_name }} ({{ $labels.tool_id }}) has error rate of {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      # Very high error rate alert
+      - alert: CriticalExecutionErrorRate
+        expr: |
+          (
+            sum(rate(mcp_executions_total{status="failed"}[5m])) by (tool_id, tool_name)
+            /
+            sum(rate(mcp_executions_total[5m])) by (tool_id, tool_name)
+          ) > 0.20
+        for: 2m
+        labels:
+          severity: critical
+          component: mcp_execution
+        annotations:
+          summary: "CRITICAL: Very high error rate for MCP tool {{ $labels.tool_name }}"
+          description: "Tool {{ $labels.tool_name }} ({{ $labels.tool_id }}) has error rate of {{ $value | humanizePercentage }} over the last 5 minutes. Immediate action required."
+
+      # Slow execution alert
+      - alert: SlowExecutionDuration
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(mcp_execution_duration_seconds_bucket[10m])) by (tool_id, tool_name, le)
+          ) > 60
+        for: 10m
+        labels:
+          severity: warning
+          component: mcp_execution
+        annotations:
+          summary: "Slow execution times for MCP tool {{ $labels.tool_name }}"
+          description: "Tool {{ $labels.tool_name }} ({{ $labels.tool_id }}) has p95 execution time of {{ $value }}s over the last 10 minutes."
+
+      # No executions alert (possible system issue)
+      - alert: NoExecutions
+        expr: |
+          sum(rate(mcp_executions_total[10m])) == 0
+        for: 15m
+        labels:
+          severity: warning
+          component: mcp_execution
+        annotations:
+          summary: "No MCP executions in the last 15 minutes"
+          description: "No MCP tool executions have been recorded in the last 15 minutes. This may indicate a system issue."
+
+  # ============================================================================
+  # Queue Alerts
+  # ============================================================================
+  - name: mcp_queue_alerts
+    interval: 30s
+    rules:
+      # High queue depth alert
+      - alert: HighQueueDepth
+        expr: |
+          sum(mcp_queue_depth) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          component: execution_queue
+        annotations:
+          summary: "High execution queue depth"
+          description: "Execution queue depth is {{ $value }}, which exceeds the threshold of 1000. System may be overloaded."
+
+      # Critical queue depth alert
+      - alert: CriticalQueueDepth
+        expr: |
+          sum(mcp_queue_depth) > 5000
+        for: 2m
+        labels:
+          severity: critical
+          component: execution_queue
+        annotations:
+          summary: "CRITICAL: Very high execution queue depth"
+          description: "Execution queue depth is {{ $value }}, which exceeds the critical threshold of 5000. Immediate action required."
+
+      # Long queue wait times
+      - alert: LongQueueWaitTime
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(mcp_queue_wait_time_seconds_bucket[10m])) by (priority, le)
+          ) > 300
+        for: 10m
+        labels:
+          severity: warning
+          component: execution_queue
+        annotations:
+          summary: "Long queue wait times for priority {{ $labels.priority }}"
+          description: "Queue wait time p95 is {{ $value }}s for priority {{ $labels.priority }}, exceeding 5 minutes."
+
+  # ============================================================================
+  # Cache Alerts
+  # ============================================================================
+  - name: mcp_cache_alerts
+    interval: 30s
+    rules:
+      # Low cache hit rate alert
+      - alert: LowCacheHitRate
+        expr: |
+          mcp_cache_hit_rate < 0.50
+        for: 10m
+        labels:
+          severity: warning
+          component: result_cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}, which is below the threshold of 50%. Consider investigating cache configuration."
+
+      # Very low cache hit rate alert
+      - alert: VeryLowCacheHitRate
+        expr: |
+          mcp_cache_hit_rate < 0.30
+        for: 5m
+        labels:
+          severity: critical
+          component: result_cache
+        annotations:
+          summary: "CRITICAL: Very low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}, which is critically low. Cache may not be functioning properly."
+
+  # ============================================================================
+  # Resource Alerts
+  # ============================================================================
+  - name: mcp_resource_alerts
+    interval: 30s
+    rules:
+      # High CPU usage alert
+      - alert: HighCPUUsage
+        expr: |
+          sum(mcp_cpu_usage) by (tool_id, tool_name) > 8.0
+        for: 5m
+        labels:
+          severity: warning
+          component: resource_management
+        annotations:
+          summary: "High CPU usage for tool {{ $labels.tool_name }}"
+          description: "Tool {{ $labels.tool_name }} is using {{ $value }} CPU cores, which exceeds the threshold."
+
+      # High memory usage alert
+      - alert: HighMemoryUsage
+        expr: |
+          sum(mcp_memory_usage_mb) by (tool_id, tool_name) > 8192
+        for: 5m
+        labels:
+          severity: warning
+          component: resource_management
+        annotations:
+          summary: "High memory usage for tool {{ $labels.tool_name }}"
+          description: "Tool {{ $labels.tool_name }} is using {{ $value }}MB of memory, which exceeds the threshold."
+
+      # Too many active executions
+      - alert: TooManyActiveExecutions
+        expr: |
+          sum(mcp_active_executions) > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: resource_management
+        annotations:
+          summary: "Too many active executions"
+          description: "There are {{ $value }} active executions, which exceeds the threshold of 100."
+
+  # ============================================================================
+  # API Alerts
+  # ============================================================================
+  - name: api_alerts
+    interval: 30s
+    rules:
+      # High API error rate
+      - alert: HighAPIErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High API error rate"
+          description: "API error rate is {{ $value | humanizePercentage }}, which exceeds 5%."
+
+      # Slow API response times
+      - alert: SlowAPIResponseTime
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[10m])) by (method, endpoint, le)
+          ) > 5
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Slow API response times for {{ $labels.method }} {{ $labels.endpoint }}"
+          description: "API endpoint {{ $labels.method }} {{ $labels.endpoint }} has p95 response time of {{ $value }}s."
+
+      # High number of requests in progress
+      - alert: HighRequestsInProgress
+        expr: |
+          sum(http_requests_in_progress) > 50
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High number of requests in progress"
+          description: "There are {{ $value }} requests currently in progress, which may indicate slow processing."
+
+  # ============================================================================
+  # Database Alerts
+  # ============================================================================
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # High database error rate
+      - alert: HighDatabaseErrorRate
+        expr: |
+          sum(rate(database_errors_total[5m])) by (database) > 1
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "High database error rate for {{ $labels.database }}"
+          description: "Database {{ $labels.database }} has {{ $value }} errors per second."
+
+      # Slow database queries
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(database_query_duration_seconds_bucket[10m])) by (database, operation, le)
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries for {{ $labels.database }}"
+          description: "Database {{ $labels.database }} {{ $labels.operation }} has p95 query time of {{ $value }}s."
+
+  # ============================================================================
+  # WebSocket Alerts
+  # ============================================================================
+  - name: websocket_alerts
+    interval: 30s
+    rules:
+      # High number of WebSocket connections
+      - alert: HighWebSocketConnections
+        expr: |
+          websocket_connections_active > 1000
+        for: 5m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "High number of active WebSocket connections"
+          description: "There are {{ $value }} active WebSocket connections, which exceeds the threshold."
+
+      # Sudden drop in WebSocket connections
+      - alert: WebSocketConnectionDrop
+        expr: |
+          (
+            websocket_connections_active
+            -
+            websocket_connections_active offset 5m
+          ) < -100
+        for: 2m
+        labels:
+          severity: warning
+          component: websocket
+        annotations:
+          summary: "Sudden drop in WebSocket connections"
+          description: "WebSocket connections dropped by {{ $value }} in the last 5 minutes."
+
+  # ============================================================================
+  # System Alerts
+  # ============================================================================
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # Service down alert
+      - alert: ServiceDown
+        expr: |
+          up == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} on instance {{ $labels.instance }} has been down for more than 2 minutes."
+
+      # High system CPU usage
+      - alert: HighSystemCPU
+        expr: |
+          100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High system CPU usage on {{ $labels.instance }}"
+          description: "System CPU usage is {{ $value }}% on {{ $labels.instance }}."
+
+      # High system memory usage
+      - alert: HighSystemMemory
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High system memory usage on {{ $labels.instance }}"
+          description: "System memory usage is {{ $value }}% on {{ $labels.instance }}."
+
+      # Disk space running low
+      - alert: DiskSpaceLow
+        expr: |
+          (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "Disk space running low on {{ $labels.instance }}"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }} {{ $labels.mountpoint }}."

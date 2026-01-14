@@ -48,6 +48,21 @@ class MCPToolModel(BaseModel):
         back_populates="tool",
         cascade="all, delete-orphan"
     )
+    execution_queue = relationship(
+        "ExecutionQueueModel",
+        back_populates="tool",
+        cascade="all, delete-orphan"
+    )
+    scheduled_executions = relationship(
+        "ScheduledExecutionModel",
+        back_populates="tool",
+        cascade="all, delete-orphan"
+    )
+    execution_costs = relationship(
+        "ExecutionCostModel",
+        back_populates="tool",
+        cascade="all, delete-orphan"
+    )
     
     # Indexes
     __table_args__ = (

@@ -33,6 +33,14 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_PASSWORD: Optional[str] = None
     
+    # Database - Elasticsearch
+    ELASTICSEARCH_HOST: str = "localhost"
+    ELASTICSEARCH_PORT: int = 9200
+    ELASTICSEARCH_SCHEME: str = "http"
+    ELASTICSEARCH_USER: Optional[str] = None
+    ELASTICSEARCH_PASSWORD: Optional[str] = None
+    ELASTICSEARCH_INDEX_PREFIX: str = "mcp_logs"
+    
     # Message Broker - RabbitMQ
     RABBITMQ_HOST: str = "localhost"
     RABBITMQ_PORT: int = 5672
@@ -67,7 +75,7 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = "json"  # json or text
     LOG_HEALTH_CHECKS: bool = False  # Set to True to log health check requests
     
-    @field_validator('MYSQL_PORT', 'REDIS_PORT', 'RABBITMQ_PORT')
+    @field_validator('MYSQL_PORT', 'REDIS_PORT', 'RABBITMQ_PORT', 'ELASTICSEARCH_PORT')
     @classmethod
     def validate_port(cls, v: int, info) -> int:
         """Validate that port numbers are in the valid range (1-65535)"""

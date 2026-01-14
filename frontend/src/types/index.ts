@@ -223,6 +223,27 @@ export interface HealthStatus {
   };
 }
 
+// Execution History types
+export interface ExecutionLog {
+  id: string;
+  tool_id: string;
+  user_id: string;
+  tool_name: string;
+  arguments: Record<string, any>;
+  result?: Record<string, any>;
+  status: string;
+  start_time: string;
+  end_time: string;
+  duration_ms: number;
+  error?: string;
+}
+
+export interface ExecutionHistoryFilters {
+  status?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
 // Pagination types
 export interface PaginationParams {
   page?: number;

@@ -1,0 +1,16 @@
+# Grafana Dashboard Provisioning Configuration
+# This file automatically loads dashboards into Grafana
+
+apiVersion: 1
+
+providers:
+  - name: 'MCP Platform Dashboards'
+    orgId: 1
+    folder: 'MCP Platform'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: true

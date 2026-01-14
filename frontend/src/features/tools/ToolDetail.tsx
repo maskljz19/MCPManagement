@@ -21,6 +21,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import ToolHistory from './components/ToolHistory';
+import ExecuteButton from './components/ExecuteButton';
+import ExecutionHistory from './components/ExecutionHistory';
 
 const statusConfig = {
   DRAFT: { label: '草稿', variant: 'secondary' as const },
@@ -86,6 +88,12 @@ export default function ToolDetail() {
     navigate('/tools');
   };
 
+  // Handle execute button click
+  const handleExecute = () => {
+    // ExecutionModal is now integrated in ExecuteButton component
+    // No additional action needed here
+  };
+
   if (error) {
     return (
       <div className="space-y-6">
@@ -140,6 +148,12 @@ export default function ToolDetail() {
           返回列表
         </Button>
         <div className="flex gap-2">
+          <ExecuteButton
+            toolId={tool.id}
+            toolName={tool.name}
+            toolConfig={tool.config || undefined}
+            onExecute={handleExecute}
+          />
           <Button variant="outline" onClick={handleEdit}>
             <Edit className="mr-2 h-4 w-4" />
             编辑
@@ -241,6 +255,9 @@ export default function ToolDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Execution History */}
+      {id && <ExecutionHistory toolId={id} toolName={tool.name} />}
 
       {/* Version History */}
       {id && <ToolHistory toolId={id} />}

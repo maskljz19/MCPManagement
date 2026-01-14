@@ -99,6 +99,32 @@ class UserModel(BaseModel):
         back_populates="user",
         cascade="all, delete-orphan"
     )
+    execution_queue = relationship(
+        "ExecutionQueueModel",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    batch_executions = relationship(
+        "BatchExecutionModel",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    scheduled_executions = relationship(
+        "ScheduledExecutionModel",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    execution_costs = relationship(
+        "ExecutionCostModel",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    resource_quota = relationship(
+        "ResourceQuotaModel",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
     
     # Indexes
     __table_args__ = (

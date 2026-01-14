@@ -11,6 +11,7 @@ from datetime import datetime
 from app.core.security import verify_token
 from app.core.database import get_redis
 from app.services.task_tracker import TaskTracker
+from app.services.execution_websocket_manager import execution_ws_manager
 from redis.asyncio import Redis
 from app.api.v1.auth import get_current_user
 from app.models.user import UserModel
@@ -618,3 +619,334 @@ async def notify_task_update(task_id: str, status_data: Dict[str, Any]) -> None:
     Validates: Requirements 13.2
     """
     await manager.send_task_update(task_id, status_data)
+
+
+
+# ============================================================================
+# Execution WebSocket Endpoint
+# ============================================================================
+
+@router.websocket("/ws/executions")
+async def execution_websocket_endpoint(
+    websocket: WebSocket,
+    token: Optional[str] = None,
+    redis: Redis = Depends(get_redis)
+):
+    """
+    WebSocket endpoint for real-time execution updates and log streaming.
+    
+    This endpoint provides real-time communication for MCP tool executions,
+    including status updates, progress tracking, and log streaming.
+    
+    Message Format:
+    - Client -> Server:
+      {
+        "action": "subscribe" | "unsubscribe" | "ping",
+        "execution_id": "uuid" (for subscribe/unsubscribe)
+      }
+    
+    - Server -> Client:
+      {
+        "type": "status_update" | "log_entry" | "execution_complete" | "error" | "pong",
+        "execution_id": "uuid",
+        "data": {...},
+        "timestamp": "ISO8601"
+      }
+    
+    Status Update Message:
+      {
+        "type": "status_update",
+        "execution_id": "uuid",
+        "status": "queued" | "running" | "completed" | "failed" | "cancelled",
+        "progress": 0-100 (optional),
+        "metadata": {...} (optional),
+        "timestamp": "ISO8601"
+      }
+    
+    Log Entry Message:
+      {
+        "type": "log_entry",
+        "execution_id": "uuid",
+        "timestamp": "ISO8601",
+        "level": "info" | "warning" | "error" | "debug",
+        "message": "log message",
+        "metadata": {...} (optional)
+      }
+    
+    Execution Complete Message:
+      {
+        "type": "execution_complete",
+        "execution_id": "uuid",
+        "status": "success" | "failed" | "cancelled" | "timeout",
+        "result": {...} (optional),
+        "error": "error message" (optional),
+        "timestamp": "ISO8601"
+      }
+    
+    Validates: Requirements 3.1, 3.2, 3.3, 13.1, 13.4
+    """
+    connection_id = None
+    
+    # Authenticate connection BEFORE accepting
+    if not token:
+        logger.debug("execution_websocket_rejected", reason="missing_token")
+        await websocket.close(code=1008, reason="Missing authentication token")
+        return
+    
+    try:
+        user_id = await authenticate_websocket(token)
+    except ValueError as e:
+        logger.debug("execution_websocket_auth_failed", error=str(e))
+        await websocket.close(code=1008, reason="Authentication failed")
+        return
+    
+    try:
+        # Generate connection ID
+        import uuid
+        connection_id = str(uuid.uuid4())
+        
+        # Accept and register connection
+        await execution_ws_manager.connect(websocket, connection_id, user_id)
+        
+        # Send welcome message
+        await websocket.send_json({
+            "type": "connected",
+            "connection_id": connection_id,
+            "message": "Execution WebSocket connection established",
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        
+        # Message handling loop
+        while True:
+            # Receive message from client
+            data = await websocket.receive_json()
+            
+            action = data.get("action")
+            
+            if action == "subscribe":
+                # Subscribe to execution updates
+                execution_id = data.get("execution_id")
+                if execution_id:
+                    await execution_ws_manager.subscribe_to_execution(
+                        connection_id,
+                        execution_id
+                    )
+                    
+                    # Get current execution status from Redis
+                    status_key = f"execution:{execution_id}:status"
+                    current_status = await redis.get(status_key)
+                    
+                    if current_status:
+                        # Send current status
+                        status_data = json.loads(current_status)
+                        await websocket.send_json({
+                            "type": "status_update",
+                            "execution_id": execution_id,
+                            "status": status_data.get("status"),
+                            "progress": status_data.get("progress"),
+                            "metadata": status_data.get("metadata"),
+                            "timestamp": datetime.utcnow().isoformat()
+                        })
+                    
+                    await websocket.send_json({
+                        "type": "subscribed",
+                        "execution_id": execution_id,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Missing execution_id",
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+            
+            elif action == "unsubscribe":
+                # Unsubscribe from execution updates
+                execution_id = data.get("execution_id")
+                if execution_id:
+                    await execution_ws_manager.unsubscribe_from_execution(
+                        connection_id,
+                        execution_id
+                    )
+                    
+                    await websocket.send_json({
+                        "type": "unsubscribed",
+                        "execution_id": execution_id,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Missing execution_id",
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+            
+            elif action == "ping":
+                # Respond to ping
+                await websocket.send_json({
+                    "type": "pong",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            
+            else:
+                # Unknown action
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Unknown action: {action}",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+    
+    except WebSocketDisconnect:
+        logger.info(
+            "execution_websocket_client_disconnected",
+            connection_id=connection_id
+        )
+    
+    except Exception as e:
+        logger.error(
+            "execution_websocket_error",
+            connection_id=connection_id,
+            error=str(e),
+            exc_info=True
+        )
+    
+    finally:
+        # Clean up connection
+        if connection_id:
+            await execution_ws_manager.disconnect(connection_id)
+
+
+# ============================================================================
+# Execution WebSocket Stats Endpoint (Admin Only)
+# ============================================================================
+
+@router.get("/ws/executions/stats")
+async def get_execution_websocket_stats(
+    current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Get statistics about execution WebSocket connections.
+    
+    This endpoint is restricted to admin users for monitoring purposes.
+    
+    Returns:
+    {
+        "active_connections": int,
+        "unique_users": int,
+        "active_subscriptions": int,
+        "total_subscription_count": int
+    }
+    
+    Validates: Requirements 13.4
+    """
+    # Check if user is admin
+    if not current_user.is_admin():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin users can view WebSocket statistics"
+        )
+    
+    stats = execution_ws_manager.get_connection_stats()
+    
+    return {
+        "status": "success",
+        "data": stats,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+
+# ============================================================================
+# Helper Functions for Execution Updates
+# ============================================================================
+
+async def notify_execution_status_update(
+    execution_id: str,
+    status: str,
+    progress: Optional[int] = None,
+    metadata: Optional[Dict[str, Any]] = None
+) -> int:
+    """
+    Notify all subscribed WebSocket clients about execution status update.
+    
+    This function should be called by execution services when status changes.
+    
+    Args:
+        execution_id: Execution identifier
+        status: Current execution status
+        progress: Optional progress percentage (0-100)
+        metadata: Optional additional metadata
+    
+    Returns:
+        Number of clients notified
+    
+    Validates: Requirements 3.1, 3.2
+    """
+    return await execution_ws_manager.send_status_update(
+        execution_id,
+        status,
+        progress,
+        metadata
+    )
+
+
+async def notify_execution_log_entry(
+    execution_id: str,
+    log_level: str,
+    message: str,
+    timestamp: Optional[datetime] = None,
+    metadata: Optional[Dict[str, Any]] = None
+) -> int:
+    """
+    Stream log entry to all subscribed WebSocket clients.
+    
+    This function should be called by execution services when logs are generated.
+    
+    Args:
+        execution_id: Execution identifier
+        log_level: Log level (info, warning, error, debug)
+        message: Log message
+        timestamp: Optional log timestamp
+        metadata: Optional additional metadata
+    
+    Returns:
+        Number of clients notified
+    
+    Validates: Requirements 3.3
+    """
+    return await execution_ws_manager.send_log_entry(
+        execution_id,
+        log_level,
+        message,
+        timestamp,
+        metadata
+    )
+
+
+async def notify_execution_complete(
+    execution_id: str,
+    status: str,
+    result: Optional[Dict[str, Any]] = None,
+    error: Optional[str] = None
+) -> int:
+    """
+    Notify all subscribed WebSocket clients about execution completion.
+    
+    This function should be called by execution services when execution completes.
+    
+    Args:
+        execution_id: Execution identifier
+        status: Final execution status
+        result: Optional execution result
+        error: Optional error message
+    
+    Returns:
+        Number of clients notified
+    
+    Validates: Requirements 3.1, 3.2
+    """
+    return await execution_ws_manager.send_execution_complete(
+        execution_id,
+        status,
+        result,
+        error
+    )

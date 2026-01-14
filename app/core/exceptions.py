@@ -241,3 +241,70 @@ class BackwardCompatibilityError(Exception):
             "details": self.details,
             "timestamp": self.timestamp.isoformat()
         }
+
+
+
+class MCPExecutionError(Exception):
+    """
+    Raised when MCP tool execution fails.
+    
+    This exception is raised when:
+    - MCP tool configuration is invalid
+    - Tool execution times out
+    - Tool returns an error response
+    - Communication with MCP server fails
+    """
+    
+    def __init__(
+        self,
+        message: str,
+        execution_id: Optional[str] = None,
+        tool_id: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize MCPExecutionError.
+        
+        Args:
+            message: Human-readable error message
+            execution_id: ID of the failed execution (if available)
+            tool_id: ID of the tool that failed
+            details: Additional error details for debugging
+        """
+        self.message = message
+        self.execution_id = execution_id
+        self.tool_id = tool_id
+        self.details = details or {}
+        self.timestamp = datetime.utcnow()
+        
+        super().__init__(message)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert exception to dictionary for logging.
+        
+        Returns:
+            Dictionary representation of the error
+        """
+        return {
+            "error_type": "mcp_execution_error",
+            "message": self.message,
+            "execution_id": self.execution_id,
+            "tool_id": self.tool_id,
+            "details": self.details,
+            "timestamp": self.timestamp.isoformat()
+        }
+    
+    def get_api_response(self) -> Dict[str, Any]:
+        """
+        Get API-friendly error response.
+        
+        Returns:
+            Dictionary suitable for HTTP error responses
+        """
+        return {
+            "detail": self.message,
+            "type": "mcp_execution_error",
+            "execution_id": self.execution_id,
+            "tool_id": self.tool_id
+        }

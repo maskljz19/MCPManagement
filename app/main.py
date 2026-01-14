@@ -11,7 +11,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from pathlib import Path
 
-from app.api.v1 import health, tasks, auth, mcps, knowledge, analyze, github, deployments, websocket
+from app.api.v1 import health, tasks, auth, mcps, knowledge, analyze, github, deployments, websocket, mcp_execute, schedules, execution_logs, batch, queue, user_resources, admin
 from app.core.database import get_db
 from app.api.middleware import (
     UsageStatisticsMiddleware,
@@ -27,7 +27,8 @@ from app.core.config import settings
 from app.core.database import (
     init_mysql, close_mysql,
     init_mongodb, close_mongodb,
-    init_redis, close_redis
+    init_redis, close_redis,
+    init_elasticsearch, close_elasticsearch
 )
 from app.core.logging_config import get_logger
 
@@ -43,6 +44,7 @@ async def lifespan(app: FastAPI):
     await init_mysql()
     await init_mongodb()
     await init_redis()
+    await init_elasticsearch()
     logger.info("application_startup_completed")
     yield
     # Shutdown: Close database connections
@@ -50,6 +52,7 @@ async def lifespan(app: FastAPI):
     await close_mysql()
     await close_mongodb()
     await close_redis()
+    await close_elasticsearch()
     logger.info("application_shutdown_completed")
 
 
@@ -113,11 +116,18 @@ app.include_router(health.router)  # No prefix for /health/simple
 app.include_router(tasks.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(mcps.router, prefix="/api/v1")
+app.include_router(mcp_execute.router, prefix="/api/v1")
+app.include_router(batch.router, prefix="/api/v1")
 app.include_router(knowledge.router, prefix="/api/v1")
 app.include_router(analyze.router, prefix="/api/v1")
 app.include_router(github.router, prefix="/api/v1")
 app.include_router(deployments.router, prefix="/api/v1")
 app.include_router(websocket.router, prefix="/api/v1")
+app.include_router(schedules.router, prefix="/api/v1")
+app.include_router(execution_logs.router, prefix="/api/v1")
+app.include_router(queue.router, prefix="/api/v1")
+app.include_router(user_resources.router, prefix="/api/v1")
+app.include_router(admin.router, prefix="/api/v1")
 
 
 # Dynamic MCP service routing - catch-all route

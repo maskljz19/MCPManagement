@@ -16,6 +16,11 @@ from app.models import (
     UserModel,
     APIKeyModel,
     GitHubConnectionModel,
+    ExecutionQueueModel,
+    BatchExecutionModel,
+    ScheduledExecutionModel,
+    ExecutionCostModel,
+    ResourceQuotaModel,
 )
 from app.core.config import settings
 

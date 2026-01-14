@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from redis.asyncio import Redis, ConnectionPool
+from elasticsearch import AsyncElasticsearch
 from app.core.config import settings
 
 # Import Base from models (defined in models/base.py)
@@ -28,6 +29,9 @@ mongo_db: Optional[AsyncIOMotorDatabase] = None
 # Redis client
 redis_client: Optional[Redis] = None
 redis_pool: Optional[ConnectionPool] = None
+
+# Elasticsearch client
+elasticsearch_client: Optional[AsyncElasticsearch] = None
 
 
 def get_mysql_url() -> str:
@@ -288,6 +292,90 @@ async def check_redis_connection() -> bool:
     
     try:
         await redis_client.ping()
+        return True
+    except Exception:
+        return False
+
+
+# ============================================================================
+# Elasticsearch Configuration
+# ============================================================================
+
+def get_elasticsearch_url() -> str:
+    """Construct Elasticsearch connection URL"""
+    auth = ""
+    if settings.ELASTICSEARCH_USER and settings.ELASTICSEARCH_PASSWORD:
+        auth = f"{settings.ELASTICSEARCH_USER}:{settings.ELASTICSEARCH_PASSWORD}@"
+    
+    return (
+        f"{settings.ELASTICSEARCH_SCHEME}://{auth}"
+        f"{settings.ELASTICSEARCH_HOST}:{settings.ELASTICSEARCH_PORT}"
+    )
+
+
+async def init_elasticsearch() -> None:
+    """Initialize Elasticsearch async client"""
+    global elasticsearch_client
+    
+    # Build connection parameters
+    es_params = {
+        "hosts": [get_elasticsearch_url()],
+        "verify_certs": False,  # Set to True in production with proper certs
+        "request_timeout": 30,
+        "max_retries": 3,
+        "retry_on_timeout": True
+    }
+    
+    # Add basic auth if configured
+    if settings.ELASTICSEARCH_USER and settings.ELASTICSEARCH_PASSWORD:
+        es_params["basic_auth"] = (
+            settings.ELASTICSEARCH_USER,
+            settings.ELASTICSEARCH_PASSWORD
+        )
+    
+    elasticsearch_client = AsyncElasticsearch(**es_params)
+    
+    # Test connection
+    try:
+        info = await elasticsearch_client.info()
+        print(f"Connected to Elasticsearch: {info['version']['number']}")
+    except Exception as e:
+        print(f"Warning: Could not connect to Elasticsearch: {e}")
+        # Don't fail startup if Elasticsearch is not available
+        # The service will handle this gracefully
+
+
+async def close_elasticsearch() -> None:
+    """Close Elasticsearch client and cleanup connections"""
+    global elasticsearch_client
+    if elasticsearch_client:
+        await elasticsearch_client.close()
+        elasticsearch_client = None
+
+
+def get_elasticsearch() -> AsyncElasticsearch:
+    """
+    Get Elasticsearch client instance.
+    
+    Usage:
+        es = get_elasticsearch()
+        await es.index(index="my_index", document={"key": "value"})
+    """
+    if elasticsearch_client is None:
+        raise RuntimeError("Elasticsearch not initialized. Call init_elasticsearch() first.")
+    return elasticsearch_client
+
+
+async def check_elasticsearch_connection() -> bool:
+    """
+    Check if Elasticsearch connection is healthy.
+    Used for health checks.
+    """
+    if elasticsearch_client is None:
+        return False
+    
+    try:
+        await elasticsearch_client.ping()
         return True
     except Exception:
         return False

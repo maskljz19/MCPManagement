@@ -24,6 +24,7 @@ import type {
   HealthStatus,
   ListParams,
   PaginatedResponse,
+  ExecutionLog,
 } from '../types';
 
 /**
@@ -124,6 +125,44 @@ class APIClient {
      */
     getHistory: async (id: string): Promise<ToolVersion[]> => {
       const response = await axiosInstance.get<ToolVersion[]>(`/api/v1/mcps/${id}/history`);
+      return response.data;
+    },
+
+    /**
+     * Execute an MCP tool
+     */
+    execute: async (
+      id: string,
+      data: {
+        tool_name: string;
+        arguments: Record<string, any>;
+        timeout?: number;
+      }
+    ): Promise<{
+      execution_id: string;
+      tool_id: string;
+      tool_name: string;
+      status: string;
+      result: Record<string, any>;
+      executed_at: string;
+    }> => {
+      const response = await axiosInstance.post(`/api/v1/mcps/${id}/execute`, data);
+      return response.data;
+    },
+
+    /**
+     * Get execution history for a specific tool
+     */
+    getExecutionHistory: async (
+      toolId: string,
+      limit?: number
+    ): Promise<ExecutionLog[]> => {
+      const response = await axiosInstance.get<ExecutionLog[]>(
+        `/api/v1/mcps/${toolId}/executions`,
+        {
+          params: { limit: limit || 50 },
+        }
+      );
       return response.data;
     },
   };
@@ -334,6 +373,65 @@ class APIClient {
      */
     check: async (): Promise<HealthStatus> => {
       const response = await axiosInstance.get<HealthStatus>('/api/v1/health');
+      return response.data;
+    },
+  };
+
+  /**
+   * Execution API methods
+   */
+  executions = {
+    /**
+     * Get execution status by ID
+     */
+    getStatus: async (executionId: string): Promise<{
+      execution_id: string;
+      status: string;
+      progress?: number;
+      metadata?: Record<string, any>;
+      result?: Record<string, any>;
+      error?: string;
+    }> => {
+      const response = await axiosInstance.get(`/api/v1/executions/${executionId}/status`);
+      return response.data;
+    },
+
+    /**
+     * Get execution details by ID
+     */
+    get: async (executionId: string): Promise<{
+      execution_id: string;
+      tool_id: string;
+      tool_name: string;
+      status: string;
+      result?: Record<string, any>;
+      error?: string;
+      started_at: string;
+      completed_at?: string;
+      duration_ms?: number;
+    }> => {
+      const response = await axiosInstance.get(`/api/v1/executions/${executionId}`);
+      return response.data;
+    },
+
+    /**
+     * Cancel an execution
+     */
+    cancel: async (executionId: string): Promise<void> => {
+      await axiosInstance.delete(`/api/v1/executions/${executionId}`);
+    },
+
+    /**
+     * Get execution logs
+     */
+    getLogs: async (executionId: string): Promise<{
+      logs: Array<{
+        timestamp: string;
+        level: string;
+        message: string;
+      }>;
+    }> => {
+      const response = await axiosInstance.get(`/api/v1/executions/${executionId}/logs`);
       return response.data;
     },
   };

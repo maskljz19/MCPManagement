@@ -1,6 +1,7 @@
 """Celery Application Configuration"""
 
 from celery import Celery
+from celery.schedules import crontab
 from app.core.config import settings
 
 
@@ -33,7 +34,8 @@ def make_celery() -> Celery:
             include=[
                 "app.tasks.ai_tasks",
                 "app.tasks.github_tasks",
-                "app.tasks.embedding_tasks"
+                "app.tasks.embedding_tasks",
+                "app.tasks.scheduler_tasks"
             ]
         )
 
@@ -53,14 +55,18 @@ def make_celery() -> Celery:
                 "visibility_timeout": 3600,
             },
 
-            # Beat schedule configuration - start with empty schedule
+            # Beat schedule configuration
             beat_schedule={
-                # Add scheduled tasks here as needed
-                # Example:
-                # 'periodic-cleanup': {
-                #     'task': 'app.tasks.maintenance.cleanup_old_data',
-                #     'schedule': crontab(hour=2, minute=0),  # Run daily at 2 AM
-                # },
+                # Check for due scheduled executions every minute
+                'check-due-schedules': {
+                    'task': 'scheduler.check_and_trigger_due_schedules',
+                    'schedule': 60.0,  # Every 60 seconds
+                },
+                # Clean up old inactive schedules daily at 3 AM
+                'cleanup-old-schedules': {
+                    'task': 'scheduler.cleanup_old_schedules',
+                    'schedule': crontab(hour=3, minute=0),
+                },
             },
 
             # Task routing
@@ -68,6 +74,7 @@ def make_celery() -> Celery:
                 "app.tasks.ai_tasks.*": {"queue": "ai_analysis"},
                 "app.tasks.github_tasks.*": {"queue": "github_sync"},
                 "app.tasks.embedding_tasks.*": {"queue": "embeddings"},
+                "app.tasks.scheduler_tasks.*": {"queue": "scheduler"},
             },
 
             # Worker settings
